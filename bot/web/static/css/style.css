@@ -2266,9 +2266,14 @@ body {
     font-size: 14px;
   }
 
-  /* Header-right collapses into mobile menu too */
+  /* Header-right: hidden in the header bar on mobile */
   .header-right {
     display: none;
+  }
+
+  /* When JS moves header-right inside the dropdown panel, show it */
+  .header-center .header-right {
+    display: flex;
     flex-direction: column;
     align-items: flex-start;
     gap: 10px;
@@ -2276,30 +2281,37 @@ body {
     margin-top: 10px;
     border-top: 1px solid var(--border-subtle);
     width: 100%;
-    order: 5;
   }
 
-  .header-right.open {
-    display: flex;
-  }
-
-  /* User pill: full width */
-  .user-pill {
+  /* User pill: full width inside dropdown */
+  .header-center .user-pill {
     width: 100%;
     justify-content: space-between;
   }
 
-  .user-name {
+  .header-center .user-name {
     max-width: none;
     flex: 1;
   }
 
-  /* System status visible again */
-  .system-status {
+  /* System status: always visible inside dropdown */
+  .header-center .system-status {
     display: flex;
   }
-  .status-text {
+  .header-center .status-text {
     display: inline;
+  }
+
+  /* Server picker: full width inside dropdown */
+  .header-center .server-picker-wrap {
+    width: 100%;
+    box-sizing: border-box;
+  }
+
+  /* Invite button: full width */
+  .header-center .btn-discord-invite {
+    width: 100%;
+    justify-content: center;
   }
 
   /* ---- MAIN CONTENT ---- */

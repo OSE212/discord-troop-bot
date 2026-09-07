@@ -349,16 +349,40 @@ const hamburgerBtn = document.getElementById('hamburger-btn');
 const headerCenter = document.getElementById('header-center');
 const headerRight  = document.querySelector('.header-right');
 
+// Track original DOM position so we can restore on close
+let _hrOriginalParent   = headerRight ? headerRight.parentNode : null;
+let _hrOriginalNextSibling = headerRight ? headerRight.nextSibling : null;
+
+function isMobile() {
+  return window.innerWidth <= 768;
+}
+
 function openMobileMenu() {
-  if (headerCenter) headerCenter.classList.add('open');
-  if (headerRight)  headerRight.classList.add('open');
+  if (!headerCenter) return;
+  headerCenter.classList.add('open');
   if (hamburgerBtn) hamburgerBtn.classList.add('active');
+
+  // Move header-right into the dropdown so all items appear together
+  if (isMobile() && headerRight && !headerCenter.contains(headerRight)) {
+    headerCenter.appendChild(headerRight);
+    headerRight.classList.add('mobile-in-dropdown');
+  }
 }
 
 function closeMobileMenu() {
-  if (headerCenter) headerCenter.classList.remove('open');
-  if (headerRight)  headerRight.classList.remove('open');
+  if (!headerCenter) return;
+  headerCenter.classList.remove('open');
   if (hamburgerBtn) hamburgerBtn.classList.remove('active');
+
+  // Restore header-right to its original place in the header
+  if (headerRight && headerRight.classList.contains('mobile-in-dropdown')) {
+    headerRight.classList.remove('mobile-in-dropdown');
+    if (_hrOriginalNextSibling && _hrOriginalParent && _hrOriginalParent.contains(_hrOriginalNextSibling)) {
+      _hrOriginalParent.insertBefore(headerRight, _hrOriginalNextSibling);
+    } else if (_hrOriginalParent) {
+      _hrOriginalParent.appendChild(headerRight);
+    }
+  }
 }
 
 function toggleMobileMenu() {
@@ -377,14 +401,20 @@ if (hamburgerBtn) {
   });
 }
 
+// On resize to desktop: ensure header-right is restored and menu is closed
+window.addEventListener('resize', () => {
+  if (!isMobile()) {
+    closeMobileMenu();
+  }
+});
+
 // Close mobile menu when clicking outside the header
 document.addEventListener('click', (e) => {
   const header = document.querySelector('.app-header');
-  const menuPanel = headerCenter;
   if (
-    menuPanel && menuPanel.classList.contains('open') &&
+    headerCenter && headerCenter.classList.contains('open') &&
     header && !header.contains(e.target) &&
-    menuPanel && !menuPanel.contains(e.target)
+    headerCenter && !headerCenter.contains(e.target)
   ) {
     closeMobileMenu();
   }
