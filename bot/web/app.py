@@ -15,6 +15,7 @@ from bot.web.api import (
     handle_delete_player,
     handle_discord_callback,
     handle_discord_login,
+    handle_download_template_csv,
     handle_get_guilds,
     handle_get_player,
     handle_get_presets,
@@ -61,6 +62,7 @@ def create_web_app(
 
     app.router.add_get("/api/stats", handle_get_stats)
     app.router.add_get("/api/players", handle_list_players)
+    app.router.add_get("/api/players/template-csv", handle_download_template_csv)
     app.router.add_post("/api/players", handle_create_player)
     app.router.add_post("/api/players/import", handle_import_players_csv)
     app.router.add_get("/api/players/{id}", handle_get_player)

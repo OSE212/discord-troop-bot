@@ -134,3 +134,41 @@ Player1,5555,150000,20,20,20
     p = importer.repo.get_by_game_player_id("5555")
     assert p.march_limit == 150_000
     assert p.profile_for(TroopType.INFANTRY).level == 20
+
+
+def test_csv_importer_google_forms_export(session):
+    importer = CsvImporter(session)
+    # Exact Google Forms export structure with Timestamp and hero columns
+    google_csv = (
+        "Timestamp,In-Game Name,Game ID,March Limit,Discord Username,Infantry FC,Infantry Helios,Lancers FC,Lancers Helios,Marksman FC,Marksman Helios,Jessie,Patrick,Jasser,Seoyoon\n"
+        "2026/09/07 3:45:12 PM EST,LordVader,10001,165k,vader#0001,FC 30,Yes - 150k,FC 28,No,FC 29,Yes,5 Stars (Max),4 Stars,3 Stars,Not Owned\n"
+        "2026/09/07 3:46:01 PM EST,CommanderLuke,,\"150,000\",luke_sky,Level 25,No,Level 25,No,Level 25,No,4 Stars,5 Stars (Max),Not Owned,4 Stars\n"
+    )
+    res = importer.import_text(google_csv)
+    assert res.total_rows == 2
+    assert res.created == 2
+    assert res.skipped == 0
+    assert len(res.errors) == 0
+
+    p1 = importer.repo.get_by_game_player_id("10001")
+    assert p1 is not None
+    assert p1.name == "LordVader"
+    assert p1.march_limit == 165_000
+    assert p1.profile_for(TroopType.INFANTRY).level == 30
+    assert p1.profile_for(TroopType.INFANTRY).helios is True
+    assert p1.profile_for(TroopType.INFANTRY).helios_quantity == 150_000
+    assert p1.profile_for(TroopType.LANCERS).helios is False
+    assert len(p1.heroes) == 3
+    hero_names = {h.hero_name: h.stars for h in p1.heroes}
+    assert hero_names["jessie"] == 5
+    assert hero_names["patrick"] == 4
+    assert hero_names["jasser"] == 3
+    assert "seoyoon" not in hero_names  # 'Not Owned' is filtered out
+
+    # Test player 2 where Game ID was blank (auto-generated fallback)
+    p2 = importer.repo.get_by_discord_id("luke_sky")
+    assert p2 is not None
+    assert p2.name == "CommanderLuke"
+    assert p2.march_limit == 150_000
+    assert p2.profile_for(TroopType.INFANTRY).level == 25
+

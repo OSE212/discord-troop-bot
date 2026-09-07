@@ -109,6 +109,16 @@ def parse_helios(val: Any) -> tuple[bool, Optional[int]]:
     if s in ("yes", "y", "true", "oui", "ja", "si", "x", "v", "1"):
         return True, None
 
+    # Check if string contains "yes" along with a quantity, e.g. "Yes - 150k", "Yes (100,000)"
+    if any(pos in s for pos in ("yes", "oui", "ja", "si", "true")):
+        # Extract embedded numbers with potential suffixes k/m
+        m = re.search(r"(\d+(?:[,\.]\d+)?\s*[kmKM]?)", s)
+        if m:
+            qty = parse_number(m.group(1))
+            if qty is not None and qty > 0:
+                return True, qty
+        return True, None
+
     # Check if a number was entered directly
     qty = parse_number(val)
     if qty is not None:
@@ -237,6 +247,29 @@ HEADER_SYNONYMS: dict[str, set[str]] = {
     "hero_gregory": {"gregory", "greg", "gregory stars"},
     "hero_eleonora": {"eleonora", "eleonore", "eleonora stars"},
     "hero_hervor": {"hervor", "hervor stars"},
+}
+
+HERO_CANONICAL_DISPLAY: dict[str, str] = {
+    "hero_jessie": "Jessie",
+    "hero_patrick": "Patrick",
+    "hero_jasser": "Jasser",
+    "hero_seoyoon": "Seoyoon",
+    "hero_sergey": "Sergey",
+    "hero_ling_xue": "Ling Xue",
+    "hero_ahmose": "Ahmose",
+    "hero_norah": "Norah",
+    "hero_edith": "Edith",
+    "hero_hendrik": "Hendrik",
+    "hero_blanchette": "Blanchette",
+    "hero_alonso": "Alonso",
+    "hero_renee": "Renee",
+    "hero_philly": "Philly",
+    "hero_gatot": "Gatot",
+    "hero_wu_ming": "Wu Ming",
+    "hero_hector": "Hector",
+    "hero_gregory": "Gregory",
+    "hero_eleonora": "Eleonora",
+    "hero_hervor": "Hervor",
 }
 
 
@@ -382,7 +415,9 @@ class CsvImporter:
             heroes_data: dict[str, dict] = {}
             for col_key in col_map:
                 if col_key.startswith("hero_"):
-                    hero_canonical_name = col_key[5:]
+                    hero_canonical_name = HERO_CANONICAL_DISPLAY.get(
+                        col_key, col_key[5:].replace("_", " ").title()
+                    )
                     raw_hero_val = get_val(col_key)
                     parsed_hero = parse_hero_spec(raw_hero_val)
                     if parsed_hero:

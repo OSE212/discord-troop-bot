@@ -803,6 +803,25 @@ async def handle_import_players_csv(request: web.Request) -> web.Response:
         return web.json_response({"error": str(exc)}, status=500)
 
 
+TEMPLATE_CSV_CONTENT = (
+    "In-Game Name,Game ID,March Limit,Discord Username,Infantry FC,Infantry Helios,Lancers FC,Lancers Helios,Marksman FC,Marksman Helios,Jessie,Patrick,Jasser,Seoyoon\n"
+    "LordVader,10001,165000,vader_01,30,Yes,28,No,29,150k,5,4,4,5\n"
+    "CommanderLuke,10002,150000,luke_sky,25,No,25,No,25,No,4,5,3,4\n"
+    "Solo,10003,160000,,28,No,28,Yes,28,No,5,3,4,3\n"
+)
+
+
+async def handle_download_template_csv(request: web.Request) -> web.Response:
+    return web.Response(
+        text=TEMPLATE_CSV_CONTENT,
+        content_type="text/csv",
+        charset="utf-8",
+        headers={
+            "Content-Disposition": 'attachment; filename="alliance_roster_template.csv"',
+        },
+    )
+
+
 # --- Formation Calculation Endpoint ---
 
 async def handle_calculate(request: web.Request) -> web.Response:

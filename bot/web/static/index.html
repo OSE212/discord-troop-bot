@@ -287,6 +287,14 @@
             <p class="pane-desc">Manage registered players, update march limits, and configure troop levels.</p>
           </div>
           <div class="header-actions">
+            <a href="/api/players/template-csv" download="alliance_roster_template.csv" class="btn btn-secondary" id="btn-download-template" title="Download Excel/CSV Roster Template">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                <polyline points="7 10 12 15 17 10"/>
+                <line x1="12" y1="15" x2="12" y2="3"/>
+              </svg>
+              Template CSV
+            </a>
             <button class="btn btn-secondary" id="btn-import-csv">
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                 <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
@@ -704,6 +712,15 @@
             <p class="text-muted text-sm mb-12">When planning a Rally or Garrison:</p>
             <div class="code-pill">/calculate</div>
             <p class="text-muted text-sm mt-8">Prompts for Attack/Defence, Rally/Garrison, troop ratios, and total capacity. Calculates the optimal troop composition and identifies the <strong>Top 4 Joiners</strong> to maximize active skills.</p>
+          </div>
+
+          <!-- 4. Google Survey Bulk Import Card -->
+          <div class="glass-card guide-card">
+            <div class="guide-step-badge">STEP 4</div>
+            <h3 class="card-title mt-8 mb-8">4. Bulk Import (Google Survey)</h3>
+            <p class="text-muted text-sm mb-12">Gather member data with Google Forms:</p>
+            <div class="code-pill">Roster ➔ Import CSV</div>
+            <p class="text-muted text-sm mt-8">Download our ready template via <strong>Template CSV</strong> or export directly from a Google Sheet. The importer matches questions automatically and updates all troop/hero stats instantly.</p>
           </div>
         </div>
 

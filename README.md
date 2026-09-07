@@ -150,11 +150,14 @@ culprits are minor SQLAlchemy/discord.py version-API mismatches
 - **Calculation** (`/calculate`): guided (Attack/Defence → Rally/
   Garrison → ratio % + capacity modal). Read-only against player data;
   never modifies registration.
-- **Web Admin Panel** (`http://localhost:8080`): Modern browser dashboard
+- **Web Admin Panel** (`http://localhost:8080` / `http://troopbot.duckdns.org`): Modern browser dashboard
   for Bot Owners and Server Admins. Provides live overview statistics, full
   player roster management (add/edit/delete with single unified forms), an
   interactive Formation Simulator with real-time ratio sliders, and optimizer
   rules tuning.
+- **Bulk Import & Google Survey Integration**: Bulk import alliance members via CSV/TSV
+  directly from Google Forms/Sheets. Downloadable template available on the dashboard or
+  build the survey in 5 seconds using our **[Google Survey Generator Guide](GOOGLE_SURVEY_TEMPLATE.md)**.
 - **Optimizer**: deterministic greedy allocator. Respects march limits
   (including when a player's march is split across troop types),
   finite Helios quantities, abundant non-Helios availability, formation
