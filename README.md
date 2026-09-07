@@ -7,6 +7,23 @@ deterministic, rule-based Rally/Garrison formations. Built from
 No LLM is used to decide troop assignments — the optimizer is a
 deterministic, configurable, rule-based algorithm (spec rule 10).
 
+## 🚀 Live Bot & Web Dashboard
+
+### 🔗 Bot Invite Links
+Add TroopBot to your Discord server with one click:
+- **[Standard Permissions Invite (Recommended)](https://discord.com/api/oauth2/authorize?client_id=1546130673641721906&permissions=277025778752&scope=bot%20applications.commands)**  
+  *(Includes Send Messages, Slash Commands, Embed Links, Attach Files, and Read Message History)*
+- **[Administrator Permissions Invite (Alternative)](https://discord.com/api/oauth2/authorize?client_id=1546130673641721906&permissions=8&scope=bot%20applications.commands)**
+
+### 🌐 Live Web Admin Panel
+Access the multi-tenant web dashboard at: **[http://51.170.133.36](http://51.170.133.36)**
+- **Multi-Server Dashboard**: Server admins can log in with their personal Discord account via OAuth2 to manage their alliance roster and formations.
+- **Data Isolation**: Each server's player database is strictly isolated.
+- **Guest Access**: Non-admins can test battle compositions in the interactive simulator and view the complete command guide.
+- **Master Passkey**: Bot owner can unlock global cross-server administration using the master passkey.
+
+---
+
 ## Setup & Running the Bot
 
 ### 1. Environment & Configuration
@@ -101,7 +118,7 @@ Slash commands sync automatically on startup (`setup_hook`). It can take up to a
 
 ## Running the Tests
 
-You can execute the 41-test suite with either:
+You can execute the 52-test suite with either:
 
 * **PowerShell**: `.\.venv\Scripts\pytest` (or `pytest` if activated)
 * **Git Bash**: `./.venv/Scripts/pytest` (or `pytest` if activated)
