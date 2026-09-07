@@ -1,0 +1,16 @@
+[Unit]
+Description=Discord Troop Bot & Web Admin Panel
+After=network.target
+
+[Service]
+Type=simple
+User=ubuntu
+WorkingDirectory=/home/ubuntu/discord-troop-bot
+ExecStart=/home/ubuntu/discord-troop-bot/.venv/bin/python run.py
+Restart=always
+RestartSec=5
+Environment=PYTHONUNBUFFERED=1
+EnvironmentFile=/home/ubuntu/discord-troop-bot/.env
+
+[Install]
+WantedBy=multi-user.target

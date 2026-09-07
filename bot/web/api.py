@@ -1,0 +1,769 @@
+from __future__ import annotations
+
+import hashlib
+import hmac
+import json
+import logging
+import os
+import time
+from pathlib import Path
+from typing import Any, Optional
+
+from aiohttp import ClientSession, web
+
+from bot.database.models.player import Player, TroopType
+from bot.database.repositories.player_repository import PlayerRepository
+from bot.optimizer.types import FormationType, Mode
+from bot.rules.configuration import RankingConfig, load_config
+from bot.rules.formation_guide import FORMATION_GUIDE_PRESETS
+from bot.optimizer.ratio import InvalidCapacityError, InvalidRatioError
+from bot.services.csv_importer import CsvImporter
+from bot.services.formation_service import FormationService
+from bot.services.player_service import (
+    PlayerService,
+    RegistrationDraft,
+    TroopTypeInput,
+    ValidationError,
+)
+from bot.settings import Settings
+
+logger = logging.getLogger("troop_bot.web")
+
+
+def serialize_player(player: Player) -> dict[str, Any]:
+    troops: dict[str, Any] = {}
+    for troop_type in TroopType:
+        profile = player.profile_for(troop_type)
+        if profile:
+            troops[troop_type.value] = {
+                "helios": profile.helios,
+                "level": profile.level,
+                "helios_quantity": profile.helios_quantity,
+            }
+        else:
+            troops[troop_type.value] = {
+                "helios": False,
+                "level": None,
+                "helios_quantity": None,
+            }
+
+    return {
+        "id": player.id,
+        "discord_user_id": player.discord_user_id,
+        "game_player_id": player.game_player_id,
+        "name": player.name,
+        "march_limit": player.march_limit,
+        "is_complete": player.is_complete(),
+        "created_at": player.created_at.isoformat() if player.created_at else None,
+        "updated_at": player.updated_at.isoformat() if player.updated_at else None,
+        "troops": troops,
+        "heroes": [
+            {
+                "name": h.hero_name,
+                "stars": h.stars,
+                "skill_level": h.skill_level,
+            }
+            for h in (player.heroes or [])
+        ],
+    }
+
+
+def _apply_heroes_to_player(
+    repo: "PlayerRepository",
+    player: "Player",
+    heroes_data: list,
+) -> None:
+    """Upsert hero entries and remove any not present in the new list."""
+    if not isinstance(heroes_data, list):
+        return
+    incoming_names = set()
+    for h in heroes_data:
+        hero_name = str(h.get("name", "")).strip()
+        if not hero_name:
+            continue
+        stars = max(1, min(5, int(h.get("stars", 1))))
+        skill_level = max(1, min(5, int(h.get("skill_level", 1))))
+        repo.upsert_hero(player, hero_name, stars=stars, skill_level=skill_level)
+        incoming_names.add(hero_name.lower().strip())
+    # Remove heroes that are no longer in the list
+    to_remove = [h for h in (player.heroes or []) if h.hero_name not in incoming_names]
+    for h in to_remove:
+        player.heroes.remove(h)
+        repo.session.delete(h)
+    repo.session.flush()
+
+
+def _sign_session(role: str, user_name: str, secret: str) -> str:
+    timestamp = str(int(time.time()))
+    payload = f"{role}:{user_name}:{timestamp}"
+    signature = hmac.new(secret.encode(), payload.encode(), hashlib.sha256).hexdigest()
+    return f"{payload}:{signature}"
+
+
+def _verify_session(token: str, secret: str, max_age_seconds: int = 86400 * 7) -> Optional[dict[str, str]]:
+    try:
+        parts = token.split(":")
+        if len(parts) != 4:
+            return None
+        role, user_name, timestamp_str, sig = parts
+        payload = f"{role}:{user_name}:{timestamp_str}"
+        expected = hmac.new(secret.encode(), payload.encode(), hashlib.sha256).hexdigest()
+        if not hmac.compare_digest(sig, expected):
+            return None
+        timestamp = int(timestamp_str)
+        if time.time() - timestamp > max_age_seconds:
+            return None
+        return {"role": role, "name": user_name}
+    except Exception:
+        return None
+
+
+def get_current_user(request: web.Request) -> Optional[dict[str, str]]:
+    secret = request.app["settings"].admin_panel_key
+    cookie = request.cookies.get("troop_session")
+    if not cookie:
+        auth_header = request.headers.get("Authorization", "")
+        if auth_header.startswith("Bearer "):
+            cookie = auth_header[7:].strip()
+    if not cookie:
+        return None
+    return _verify_session(cookie, secret)
+
+
+# --- Auth Endpoints ---
+
+async def handle_auth_me(request: web.Request) -> web.Response:
+    user = get_current_user(request)
+    settings: Settings = request.app["settings"]
+    has_discord_oauth = bool(settings.discord_client_id and settings.discord_client_secret)
+    if user:
+        return web.json_response({
+            "authenticated": True,
+            "role": user["role"],
+            "name": user["name"],
+            "has_discord_oauth": has_discord_oauth,
+        })
+    return web.json_response({
+        "authenticated": False,
+        "role": "guest",
+        "name": None,
+        "has_discord_oauth": has_discord_oauth,
+    })
+
+
+async def handle_login_passkey(request: web.Request) -> web.Response:
+    try:
+        data = await request.json()
+    except Exception:
+        return web.json_response({"error": "Invalid JSON body"}, status=400)
+
+    passkey = str(data.get("passkey", "")).strip()
+    settings: Settings = request.app["settings"]
+
+    if passkey and passkey == settings.admin_panel_key:
+        token = _sign_session("owner", "Master Owner", settings.admin_panel_key)
+        response = web.json_response({"success": True, "role": "owner", "name": "Master Owner"})
+        response.set_cookie(
+            "troop_session",
+            token,
+            max_age=86400 * 7,
+            httponly=True,
+            samesite="Lax",
+        )
+        return response
+
+    return web.json_response({"error": "Invalid admin passkey"}, status=401)
+
+
+async def handle_logout(request: web.Request) -> web.Response:
+    response = web.json_response({"success": True})
+    response.del_cookie("troop_session")
+    return response
+
+
+async def handle_discord_login(request: web.Request) -> web.Response:
+    settings: Settings = request.app["settings"]
+    if not (settings.discord_client_id and settings.discord_client_secret):
+        return web.json_response({"error": "Discord OAuth is not configured on this server"}, status=400)
+
+    redirect_uri = settings.discord_redirect_uri
+    scope = "identify guilds"
+    oauth_url = (
+        f"https://discord.com/oauth2/authorize?client_id={settings.discord_client_id}"
+        f"&response_type=code&redirect_uri={redirect_uri}&scope={scope}"
+    )
+    raise web.HTTPFound(oauth_url)
+
+
+async def handle_discord_callback(request: web.Request) -> web.Response:
+    code = request.query.get("code")
+    if not code:
+        return web.Response(text="Missing OAuth code", status=400)
+
+    settings: Settings = request.app["settings"]
+    token_url = "https://discord.com/api/oauth2/token"
+    data = {
+        "client_id": settings.discord_client_id,
+        "client_secret": settings.discord_client_secret,
+        "grant_type": "authorization_code",
+        "code": code,
+        "redirect_uri": settings.discord_redirect_uri,
+    }
+    headers = {"Content-Type": "application/x-www-form-urlencoded"}
+
+    async with ClientSession() as session:
+        async with session.post(token_url, data=data, headers=headers) as resp:
+            if resp.status != 200:
+                return web.Response(text="Failed to exchange Discord OAuth token", status=400)
+            token_data = await resp.json()
+
+        access_token = token_data.get("access_token")
+        auth_headers = {"Authorization": f"Bearer {access_token}"}
+
+        # Fetch user profile
+        async with session.get("https://discord.com/api/users/@me", headers=auth_headers) as user_resp:
+            if user_resp.status != 200:
+                return web.Response(text="Failed to fetch Discord user profile", status=400)
+            user_data = await user_resp.json()
+
+        user_id = str(user_data.get("id"))
+        username = user_data.get("username", "Discord User")
+
+        # Determine role: Owner or Admin
+        role = "guest"
+        if settings.bot_owner_id and user_id == str(settings.bot_owner_id):
+            role = "owner"
+        else:
+            # Check if user has administrator / manage_server in any guild
+            async with session.get("https://discord.com/api/users/@me/guilds", headers=auth_headers) as guilds_resp:
+                if guilds_resp.status == 200:
+                    guilds = await guilds_resp.json()
+                    for g in guilds:
+                        permissions = int(g.get("permissions", 0))
+                        # Check Administrator (0x8) or Manage Server (0x20)
+                        if (permissions & 0x8) or (permissions & 0x20) or g.get("owner", False):
+                            role = "admin"
+                            break
+
+    if role == "guest":
+        return web.Response(
+            text="Access Denied: You must be a server administrator or the bot owner to access this panel.",
+            status=403,
+        )
+
+    token = _sign_session(role, username, settings.admin_panel_key)
+    response = web.HTTPFound("/")
+    response.set_cookie("troop_session", token, max_age=86400 * 7, httponly=True, samesite="Lax")
+    return response
+
+
+# --- Stats Endpoints ---
+
+async def handle_get_stats(request: web.Request) -> web.Response:
+    user = get_current_user(request)
+    if not user:
+        return web.json_response({"error": "Unauthorized"}, status=401)
+
+    db = request.app["db"]
+    with db.session() as session:
+        repo = PlayerRepository(session)
+        players = repo.list_all()
+
+        total = len(players)
+        complete = sum(1 for p in players if p.is_complete())
+        incomplete = total - complete
+        total_capacity = sum(p.march_limit for p in players)
+
+        helios_counts = {t.value: 0 for t in TroopType}
+        fc_levels = {t.value: [] for t in TroopType}
+
+        for p in players:
+            for t in TroopType:
+                prof = p.profile_for(t)
+                if prof:
+                    if prof.helios:
+                        helios_counts[t.value] += (prof.helios_quantity or 0)
+                    if prof.level is not None:
+                        fc_levels[t.value].append(prof.level)
+
+        avg_fc = {
+            k: (round(sum(v) / len(v), 1) if v else 0) for k, v in fc_levels.items()
+        }
+
+    return web.json_response({
+        "total_players": total,
+        "complete_players": complete,
+        "incomplete_players": incomplete,
+        "total_capacity": total_capacity,
+        "helios_quantities": helios_counts,
+        "average_levels": avg_fc,
+    })
+
+
+# --- Players Endpoints ---
+
+async def handle_list_players(request: web.Request) -> web.Response:
+    user = get_current_user(request)
+    if not user:
+        return web.json_response({"error": "Unauthorized"}, status=401)
+
+    q = request.query.get("q", "").strip().lower()
+    filter_mode = request.query.get("filter", "all").strip().lower()
+
+    db = request.app["db"]
+    with db.session() as session:
+        repo = PlayerRepository(session)
+        players = repo.list_all()
+
+        results = []
+        for p in players:
+            # Query search filter
+            if q:
+                matches_name = q in p.name.lower()
+                matches_game_id = q in p.game_player_id.lower()
+                matches_discord_id = q in p.discord_user_id.lower()
+                if not (matches_name or matches_game_id or matches_discord_id):
+                    continue
+
+            # State filter
+            if filter_mode == "complete" and not p.is_complete():
+                continue
+            if filter_mode == "incomplete" and p.is_complete():
+                continue
+            if filter_mode == "helios":
+                has_helios = any(
+                    prof.helios for prof in p.troop_profiles
+                )
+                if not has_helios:
+                    continue
+
+            results.append(serialize_player(p))
+
+    return web.json_response(results)
+
+
+async def handle_get_player(request: web.Request) -> web.Response:
+    user = get_current_user(request)
+    if not user:
+        return web.json_response({"error": "Unauthorized"}, status=401)
+
+    try:
+        player_id = int(request.match_info["id"])
+    except ValueError:
+        return web.json_response({"error": "Invalid player ID"}, status=400)
+
+    db = request.app["db"]
+    with db.session() as session:
+        repo = PlayerRepository(session)
+        player = repo.get_by_id(player_id)
+        if not player:
+            return web.json_response({"error": "Player not found"}, status=404)
+        return web.json_response(serialize_player(player))
+
+
+async def handle_create_player(request: web.Request) -> web.Response:
+    user = get_current_user(request)
+    if not user:
+        return web.json_response({"error": "Unauthorized"}, status=401)
+
+    try:
+        data = await request.json()
+    except Exception:
+        return web.json_response({"error": "Invalid JSON body"}, status=400)
+
+    game_player_id = str(data.get("game_player_id", "")).strip()
+    name = str(data.get("name", "")).strip()
+    march_limit = data.get("march_limit")
+    discord_id = str(data.get("discord_user_id", "")).strip() or f"manual_{game_player_id}"[:32]
+
+    try:
+        march_limit = int(march_limit)
+        if march_limit <= 0:
+            raise ValueError()
+    except (TypeError, ValueError):
+        return web.json_response({"error": "March limit must be a positive whole number."}, status=400)
+
+    troops_data = data.get("troops", {})
+
+    draft = RegistrationDraft(discord_user_id=discord_id)
+    draft.game_player_id = game_player_id
+    draft.name = name
+    draft.march_limit = march_limit
+
+    for troop_type in TroopType:
+        t_data = troops_data.get(troop_type.value, {})
+        helios = bool(t_data.get("helios", False))
+        level = t_data.get("level")
+        qty = t_data.get("helios_quantity")
+
+        if level is not None:
+            try:
+                level = int(level)
+            except ValueError:
+                return web.json_response({"error": f"{troop_type.value.capitalize()} level must be a number."}, status=400)
+
+        if helios and qty is not None:
+            try:
+                qty = int(qty)
+            except ValueError:
+                return web.json_response({"error": f"{troop_type.value.capitalize()} quantity must be a number."}, status=400)
+        else:
+            qty = None
+
+        draft.troop_types[troop_type] = TroopTypeInput(
+            helios=helios,
+            level=level,
+            helios_quantity=qty,
+        )
+
+    db = request.app["db"]
+    try:
+        with db.session() as session:
+            repo = PlayerRepository(session)
+            existing = repo.get_by_discord_id(discord_id)
+            if existing is not None:
+                return web.json_response({"error": f"A player with Discord/Identifier '{discord_id}' already exists."}, status=409)
+
+            service = PlayerService(repo)
+            player = service.register_player(draft)
+
+            # Apply hero data if present
+            heroes_data = data.get("heroes", [])
+            if heroes_data:
+                _apply_heroes_to_player(repo, player, heroes_data)
+
+            return web.json_response(serialize_player(player), status=201)
+    except ValidationError as exc:
+        return web.json_response({"error": str(exc)}, status=400)
+    except Exception as exc:
+        logger.exception("Error registering player via web API")
+        return web.json_response({"error": str(exc)}, status=500)
+
+
+async def handle_update_player(request: web.Request) -> web.Response:
+    user = get_current_user(request)
+    if not user:
+        return web.json_response({"error": "Unauthorized"}, status=401)
+
+    try:
+        player_id = int(request.match_info["id"])
+    except ValueError:
+        return web.json_response({"error": "Invalid player ID"}, status=400)
+
+    try:
+        data = await request.json()
+    except Exception:
+        return web.json_response({"error": "Invalid JSON body"}, status=400)
+
+    db = request.app["db"]
+    with db.session() as session:
+        repo = PlayerRepository(session)
+        player = repo.get_by_id(player_id)
+        if not player:
+            return web.json_response({"error": "Player not found"}, status=404)
+
+        service = PlayerService(repo)
+
+        # Update identity fields if provided
+        game_player_id = data.get("game_player_id")
+        name = data.get("name")
+        march_limit = data.get("march_limit")
+
+        if march_limit is not None:
+            try:
+                march_limit = int(march_limit)
+            except ValueError:
+                return web.json_response({"error": "March limit must be a number"}, status=400)
+
+        try:
+            service.update_identity(
+                player,
+                game_player_id=str(game_player_id).strip() if game_player_id else None,
+                name=str(name).strip() if name else None,
+                march_limit=march_limit,
+            )
+        except ValidationError as exc:
+            return web.json_response({"error": str(exc)}, status=400)
+
+        # Update troops
+        troops_data = data.get("troops")
+        if troops_data and isinstance(troops_data, dict):
+            for troop_type in TroopType:
+                if troop_type.value in troops_data:
+                    t_info = troops_data[troop_type.value]
+                    helios = bool(t_info.get("helios", False))
+                    level = t_info.get("level")
+                    qty = t_info.get("helios_quantity")
+
+                    if level is not None:
+                        try:
+                            level = int(level)
+                        except ValueError:
+                            return web.json_response({"error": f"{troop_type.value} level must be an integer"}, status=400)
+
+                    if helios and qty is not None:
+                        try:
+                            qty = int(qty)
+                        except ValueError:
+                            return web.json_response({"error": f"{troop_type.value} quantity must be an integer"}, status=400)
+                    else:
+                        qty = None
+
+                    try:
+                        service.update_troop_type(
+                            player,
+                            troop_type,
+                            helios=helios,
+                            level=level,
+                            helios_quantity=qty,
+                        )
+                    except ValidationError as exc:
+                        return web.json_response({"error": str(exc)}, status=400)
+
+        # Update heroes if present in payload
+        heroes_data = data.get("heroes")
+        if heroes_data is not None:
+            _apply_heroes_to_player(repo, player, heroes_data)
+
+        return web.json_response(serialize_player(player))
+
+
+async def handle_delete_player(request: web.Request) -> web.Response:
+    user = get_current_user(request)
+    if not user:
+        return web.json_response({"error": "Unauthorized"}, status=401)
+
+    try:
+        player_id = int(request.match_info["id"])
+    except ValueError:
+        return web.json_response({"error": "Invalid player ID"}, status=400)
+
+    db = request.app["db"]
+    with db.session() as session:
+        repo = PlayerRepository(session)
+        player = repo.get_by_id(player_id)
+        if not player:
+            return web.json_response({"error": "Player not found"}, status=404)
+        PlayerService(repo).remove_player(player)
+
+    return web.json_response({"success": True})
+
+
+async def handle_import_players_csv(request: web.Request) -> web.Response:
+    user = get_current_user(request)
+    if not user:
+        return web.json_response({"error": "Unauthorized"}, status=401)
+
+    csv_text = ""
+    content_type = request.content_type.lower()
+    if "multipart/form-data" in content_type:
+        reader = await request.multipart()
+        while True:
+            field = await reader.next()
+            if field is None:
+                break
+            if field.name in ("file", "csv", "csv_file"):
+                data = await field.read()
+                try:
+                    csv_text = data.decode("utf-8-sig")
+                except UnicodeDecodeError:
+                    csv_text = data.decode("latin-1", errors="replace")
+                break
+    elif "application/json" in content_type:
+        try:
+            body = await request.json()
+            csv_text = body.get("csv_text", "")
+        except Exception:
+            return web.json_response({"error": "Invalid JSON body"}, status=400)
+    else:
+        raw_data = await request.read()
+        try:
+            csv_text = raw_data.decode("utf-8-sig")
+        except UnicodeDecodeError:
+            csv_text = raw_data.decode("latin-1", errors="replace")
+
+    if not csv_text.strip():
+        return web.json_response({"error": "No CSV content provided."}, status=400)
+
+    db = request.app["db"]
+    try:
+        with db.session() as session:
+            importer = CsvImporter(session)
+            result = importer.import_text(csv_text)
+            return web.json_response(result.to_dict())
+    except Exception as exc:
+        logger.exception("Error during CSV import")
+        return web.json_response({"error": str(exc)}, status=500)
+
+
+# --- Formation Calculation Endpoint ---
+
+async def handle_calculate(request: web.Request) -> web.Response:
+    user = get_current_user(request)
+    if not user:
+        return web.json_response({"error": "Unauthorized"}, status=401)
+
+    try:
+        data = await request.json()
+    except Exception:
+        return web.json_response({"error": "Invalid JSON body"}, status=400)
+
+    raw_mode = str(data.get("mode", "attack")).strip().lower()
+    raw_formation = str(data.get("formation_type", "rally")).strip().lower()
+    capacity_val = data.get("capacity")
+    raw_ratio = data.get("ratio", {})
+
+    try:
+        mode = Mode(raw_mode)
+    except ValueError:
+        return web.json_response({"error": "Invalid mode (must be attack or defence)"}, status=400)
+
+    try:
+        formation_type = FormationType(raw_formation)
+    except ValueError:
+        return web.json_response({"error": "Invalid formation_type (must be rally or garrison)"}, status=400)
+
+    try:
+        capacity = int(capacity_val)
+    except (TypeError, ValueError):
+        return web.json_response({"error": "Capacity must be a positive whole number"}, status=400)
+
+    try:
+        ratio = {
+            TroopType.INFANTRY: float(raw_ratio.get("infantry", 0)),
+            TroopType.LANCERS: float(raw_ratio.get("lancers", 0)),
+            TroopType.MARKSMAN: float(raw_ratio.get("marksman", 0)),
+        }
+    except (TypeError, ValueError):
+        return web.json_response({"error": "Ratio percentages must be numbers"}, status=400)
+
+    db = request.app["db"]
+    config: RankingConfig = request.app["config"]
+
+    with db.session() as session:
+        repo = PlayerRepository(session)
+        service = FormationService(repo, config)
+        try:
+            result = service.calculate(
+                mode=mode,
+                formation_type=formation_type,
+                ratio=ratio,
+                capacity=capacity,
+            )
+        except (InvalidRatioError, InvalidCapacityError) as exc:
+            return web.json_response({"error": str(exc)}, status=400)
+
+        # Structure response for UI visualization
+        total_assigned = sum(result.final.values())
+        base_cap = result.base_capacity or capacity
+        target_cap = result.target_capacity or capacity
+        fill_pct = round((total_assigned / base_cap * 100), 2) if base_cap > 0 else 0
+        garrison_gap = max(0, target_cap - total_assigned) if formation_type == FormationType.GARRISON else 0
+
+        allocations = []
+        for player_summary in result.selected_players:
+            for troop_type, amount in player_summary.contributions.items():
+                allocations.append({
+                    "player_id": player_summary.player_id,
+                    "player_name": player_summary.player_name,
+                    "troop_type": troop_type.value,
+                    "amount": amount,
+                })
+
+        joiner_recs = [
+            {
+                "slot": jr.slot,
+                "player_id": jr.player_id,
+                "player_name": jr.player_name,
+                "hero_name": jr.hero_name,
+                "stars": jr.stars,
+                "skill_level": jr.skill_level,
+                "buff_description": jr.buff_description,
+            }
+            for jr in (result.joiners or [])
+        ]
+
+        return web.json_response({
+            "mode": mode.value,
+            "formation_type": formation_type.value,
+            "capacity": capacity,
+            "base_capacity": base_cap,
+            "target_capacity": target_cap,
+            "garrison_gap": garrison_gap,
+            "total_assigned": total_assigned,
+            "fill_percentage": fill_pct,
+            "status": result.status.value,
+            "targets": {t.value: result.target[t] for t in TroopType},
+            "actuals": {t.value: result.final[t] for t in TroopType},
+            "actual_ratios": {t.value: round(result.actual_ratio[t], 2) for t in TroopType},
+            "players_count": len(result.selected_players),
+            "players": [
+                {
+                    "player_id": p.player_id,
+                    "player_name": p.player_name,
+                    "total": p.total,
+                    "contributions": {t.value: amt for t, amt in p.contributions.items()},
+                }
+                for p in result.selected_players
+            ],
+            "allocations": allocations,
+            "joiner_recommendations": joiner_recs,
+        })
+
+
+# --- Formation Presets Endpoint ---
+
+async def handle_get_presets(request: web.Request) -> web.Response:
+    """Return all Gen 1-12 + Extreme formation presets for the UI dropdown."""
+    presets = [p.to_dict() for p in FORMATION_GUIDE_PRESETS]
+    return web.json_response(presets)
+
+
+# --- Rules Config Endpoints ---
+
+async def handle_get_rules(request: web.Request) -> web.Response:
+    user = get_current_user(request)
+    if not user:
+        return web.json_response({"error": "Unauthorized"}, status=401)
+
+    settings: Settings = request.app["settings"]
+    rules_path: Path = settings.rules_config_path
+    if rules_path.is_file():
+        try:
+            with open(rules_path, "r", encoding="utf-8") as f:
+                data = json.load(f)
+            return web.json_response(data)
+        except Exception as exc:
+            return web.json_response({"error": f"Failed to read rules: {exc}"}, status=500)
+
+    # Return default config serialized
+    config: RankingConfig = request.app["config"]
+    return web.json_response({
+        "attack_importance": [t.value for t in config.attack_importance],
+        "defence_importance": [t.value for t in config.defence_importance],
+        "helios_bonus": config.helios_bonus,
+        "fc_weight": config.fc_weight,
+    })
+
+
+async def handle_update_rules(request: web.Request) -> web.Response:
+    user = get_current_user(request)
+    if not user or user["role"] != "owner":
+        return web.json_response({"error": "Only the Bot Owner can modify optimizer rules."}, status=403)
+
+    try:
+        data = await request.json()
+    except Exception:
+        return web.json_response({"error": "Invalid JSON body"}, status=400)
+
+    settings: Settings = request.app["settings"]
+    rules_path: Path = settings.rules_config_path
+    try:
+        rules_path.parent.mkdir(parents=True, exist_ok=True)
+        with open(rules_path, "w", encoding="utf-8") as f:
+            json.dump(data, f, indent=2)
+        # Reload config in app
+        request.app["config"] = load_config(rules_path)
+        return web.json_response({"success": True, "config": data})
+    except Exception as exc:
+        return web.json_response({"error": f"Failed to save rules: {exc}"}, status=500)

@@ -1,0 +1,22 @@
+version: '3.8'
+
+services:
+  troop-bot:
+    build: .
+    container_name: troop-bot
+    restart: always
+    ports:
+      # Port 80 allows accessing the Web Panel directly at http://<PUBLIC_IP> without typing :8080
+      - "80:8080"
+      - "8080:8080"
+    volumes:
+      # Persistent SQLite database so data is never lost on restart/rebuild
+      - ./troop_bot.db:/app/troop_bot.db
+      - ./config:/app/config
+    env_file:
+      - .env
+    environment:
+      - PYTHONUNBUFFERED=1
+      - ENABLE_WEB_PANEL=true
+      - WEB_HOST=0.0.0.0
+      - WEB_PORT=8080

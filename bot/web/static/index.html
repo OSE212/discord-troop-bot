@@ -1,0 +1,846 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Troop Command — Discord Troop Optimizer Bot</title>
+  <meta name="description" content="Web Admin Panel for Discord Troop Optimizer Bot. Manage player rosters, run formation simulations, and tune optimizer rules.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Outfit:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/static/css/style.css">
+</head>
+<body>
+  <div class="app-container">
+    <!-- Header -->
+    <header class="app-header">
+      <div class="header-left">
+        <div class="logo-mark">
+          <img src="/static/assets/logo.svg" alt="Troop Command Logo" class="logo-img">
+        </div>
+        <div class="brand-info">
+          <h1 class="brand-title">TROOP COMMAND</h1>
+          <span class="brand-subtitle">Discord Optimizer Control Panel</span>
+        </div>
+      </div>
+
+      <!-- Mobile hamburger -->
+      <button class="hamburger" id="hamburger-btn" aria-label="Open navigation">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+          <line x1="3" y1="6" x2="21" y2="6"/>
+          <line x1="3" y1="12" x2="21" y2="12"/>
+          <line x1="3" y1="18" x2="21" y2="18"/>
+        </svg>
+      </button>
+
+      <div class="header-center" id="header-center">
+        <nav class="nav-tabs" id="nav-tabs">
+          <button class="nav-tab active" data-tab="overview" id="tab-btn-overview">
+            <svg class="tab-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/>
+              <rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/>
+            </svg>
+            Overview
+          </button>
+          <button class="nav-tab" data-tab="roster" id="tab-btn-roster">
+            <svg class="tab-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
+              <circle cx="9" cy="7" r="4"/>
+              <path d="M23 21v-2a4 4 0 0 0-3-3.87"/>
+              <path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+            </svg>
+            Roster
+          </button>
+          <button class="nav-tab" data-tab="simulator" id="tab-btn-simulator">
+            <svg class="tab-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/>
+            </svg>
+            Simulator
+          </button>
+          <button class="nav-tab" data-tab="rules" id="tab-btn-rules">
+            <svg class="tab-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <circle cx="12" cy="12" r="3"/>
+              <path d="M19.07 4.93a10 10 0 0 1 0 14.14M4.93 4.93a10 10 0 0 0 0 14.14"/>
+              <path d="M16.24 7.76a6 6 0 0 1 0 8.49M7.76 7.76a6 6 0 0 0 0 8.49"/>
+            </svg>
+            Rules
+          </button>
+        </nav>
+      </div>
+
+      <div class="header-right">
+        <div class="system-status">
+          <span class="status-dot"></span>
+          <span class="status-text">DB Active</span>
+        </div>
+        <div class="user-pill" id="user-pill">
+          <span class="user-badge" id="user-role-badge">Guest</span>
+          <span class="user-name" id="user-display-name">Not Logged In</span>
+          <button class="btn-auth" id="btn-auth-action">Login</button>
+        </div>
+      </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="main-content">
+      <!-- TAB 1: OVERVIEW -->
+      <section class="tab-pane active" id="pane-overview">
+        <div class="pane-header">
+          <div>
+            <h2 class="pane-title">Alliance Readiness Overview</h2>
+            <p class="pane-desc">Live statistics aggregated directly from the troop database.</p>
+          </div>
+          <div class="header-actions">
+            <button class="btn btn-primary" id="btn-quick-calculate">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/>
+              </svg>
+              Run Calculation
+            </button>
+            <button class="btn btn-secondary" id="btn-quick-add-player">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round">
+                <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
+              </svg>
+              Add Player
+            </button>
+          </div>
+        </div>
+
+        <div class="metrics-grid">
+          <div class="metric-card cyan">
+            <div class="metric-top">
+              <span class="metric-label">Total Registered Players</span>
+              <span class="metric-icon">
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M12 22s-8-4.5-8-11.8A8 8 0 0 1 12 2a8 8 0 0 1 8 8.2c0 7.3-8 11.8-8 11.8z"/>
+                  <circle cx="12" cy="10" r="3"/>
+                </svg>
+              </span>
+            </div>
+            <div class="metric-value" id="stat-total-players">0</div>
+            <div class="metric-footer">
+              <span class="badge-success" id="stat-complete-players">0 Complete</span>
+              <span class="metric-sub" id="stat-incomplete-players">0 Incomplete</span>
+            </div>
+          </div>
+
+          <div class="metric-card purple">
+            <div class="metric-top">
+              <span class="metric-label">Total Troop Capacity</span>
+              <span class="metric-icon">
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>
+                  <polyline points="9 22 9 12 15 12 15 22"/>
+                </svg>
+              </span>
+            </div>
+            <div class="metric-value" id="stat-total-capacity">0</div>
+            <div class="metric-footer">
+              <span class="metric-sub">Sum of all active player march limits</span>
+            </div>
+          </div>
+
+          <div class="metric-card amber">
+            <div class="metric-top">
+              <span class="metric-label">Helios Available</span>
+              <span class="metric-icon">
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                  <circle cx="12" cy="12" r="5"/>
+                  <line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/>
+                  <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/>
+                  <line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/>
+                  <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/>
+                </svg>
+              </span>
+            </div>
+            <div class="metric-value" id="stat-total-helios">0</div>
+            <div class="metric-footer">
+              <span class="metric-sub" id="stat-helios-sub">Combined finite Helios stock</span>
+            </div>
+          </div>
+
+          <div class="metric-card emerald">
+            <div class="metric-top">
+              <span class="metric-label">Average FC Levels</span>
+              <span class="metric-icon">
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                  <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>
+                </svg>
+              </span>
+            </div>
+            <div class="metric-value" id="stat-avg-fc">FC 0.0</div>
+            <div class="metric-footer">
+              <span class="metric-sub" id="stat-fc-breakdown">Inf: - | Lan: - | Mrk: -</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Troop Breakdown Section -->
+        <div class="cards-split-grid">
+          <div class="glass-card">
+            <div class="card-header">
+              <h3 class="card-title">Troop Specialization Breakdown</h3>
+            </div>
+            <div class="troop-bars">
+              <div class="troop-bar-group">
+                <div class="troop-bar-header">
+                  <span class="troop-name">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--troop-inf)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                      <path d="M12 22s-8-4.5-8-11.8A8 8 0 0 1 12 2a8 8 0 0 1 8 8.2c0 7.3-8 11.8-8 11.8z"/><circle cx="12" cy="10" r="3"/>
+                    </svg>
+                    Infantry
+                  </span>
+                  <span class="troop-stat" id="bar-infantry-stat">0 Helios | Avg FC 0</span>
+                </div>
+                <div class="progress-track">
+                  <div class="progress-fill inf" id="bar-infantry-fill" style="width: 33%"></div>
+                </div>
+              </div>
+
+              <div class="troop-bar-group">
+                <div class="troop-bar-header">
+                  <span class="troop-name">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--troop-lan)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                      <path d="M3 7l9-5 9 5v10l-9 5-9-5z"/><polyline points="3 7 12 12 21 7"/><line x1="12" y1="12" x2="12" y2="22"/>
+                    </svg>
+                    Lancers
+                  </span>
+                  <span class="troop-stat" id="bar-lancers-stat">0 Helios | Avg FC 0</span>
+                </div>
+                <div class="progress-track">
+                  <div class="progress-fill lan" id="bar-lancers-fill" style="width: 33%"></div>
+                </div>
+              </div>
+
+              <div class="troop-bar-group">
+                <div class="troop-bar-header">
+                  <span class="troop-name">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--troop-mrk)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                      <circle cx="12" cy="12" r="10"/><line x1="22" y1="12" x2="18" y2="12"/>
+                      <line x1="6" y1="12" x2="2" y2="12"/><line x1="12" y1="6" x2="12" y2="2"/>
+                      <line x1="12" y1="22" x2="12" y2="18"/><circle cx="12" cy="12" r="2"/>
+                    </svg>
+                    Marksman
+                  </span>
+                  <span class="troop-stat" id="bar-marksman-stat">0 Helios | Avg FC 0</span>
+                </div>
+                <div class="progress-track">
+                  <div class="progress-fill mrk" id="bar-marksman-fill" style="width: 34%"></div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="glass-card quick-guide-card">
+            <div class="card-header">
+              <h3 class="card-title">How the Optimizer Operates</h3>
+            </div>
+            <ul class="quick-guide-list">
+              <li>
+                <div class="guide-bullet">1</div>
+                <div><strong>Deterministic Greedy Scoring:</strong> Players with higher FC levels and Helios priority are allocated first.</div>
+              </li>
+              <li>
+                <div class="guide-bullet">2</div>
+                <div><strong>Single Player March Rule:</strong> Each player is utilized only once per formation even when their march is split.</div>
+              </li>
+              <li>
+                <div class="guide-bullet">3</div>
+                <div><strong>Dynamic Ratio Optimization:</strong> Proportions are calculated using largest-remainder rounding with finite capacity constraints.</div>
+              </li>
+            </ul>
+          </div>
+        </div>
+      </section>
+
+      <!-- TAB 2: ROSTER MANAGEMENT -->
+      <section class="tab-pane" id="pane-roster">
+        <div class="pane-header">
+          <div>
+            <h2 class="pane-title">Player Roster</h2>
+            <p class="pane-desc">Manage registered players, update march limits, and configure troop levels.</p>
+          </div>
+          <div class="header-actions">
+            <button class="btn btn-secondary" id="btn-import-csv">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                <polyline points="17 8 12 3 7 8"/>
+                <line x1="12" y1="3" x2="12" y2="15"/>
+              </svg>
+              Import CSV
+            </button>
+            <input type="file" id="csv-file-input" accept=".csv,.tsv,.txt" style="display: none;">
+            <button class="btn btn-primary" id="btn-add-player">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round">
+                <path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
+                <circle cx="8.5" cy="7" r="4"/>
+                <line x1="20" y1="8" x2="20" y2="14"/><line x1="17" y1="11" x2="23" y2="11"/>
+              </svg>
+              Add Player
+            </button>
+          </div>
+        </div>
+
+        <div class="table-toolbar">
+          <div class="search-box">
+            <svg class="search-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+            </svg>
+            <input type="text" id="roster-search" placeholder="Search by player name, Game ID, or Discord ID...">
+          </div>
+          <div class="filter-group">
+            <button class="filter-chip active" data-filter="all">All</button>
+            <button class="filter-chip" data-filter="complete">Complete</button>
+            <button class="filter-chip" data-filter="incomplete">Incomplete</button>
+            <button class="filter-chip" data-filter="helios">Has Helios</button>
+          </div>
+        </div>
+
+        <div class="table-card">
+          <div class="table-responsive">
+            <table class="data-table" id="roster-table">
+              <thead>
+                <tr>
+                  <th>Player</th>
+                  <th>Game ID</th>
+                  <th>March Limit</th>
+                  <th>Infantry</th>
+                  <th>Lancers</th>
+                  <th>Marksman</th>
+                  <th>Status</th>
+                  <th class="text-right">Actions</th>
+                </tr>
+              </thead>
+              <tbody id="roster-table-body">
+                <tr>
+                  <td colspan="8" class="empty-cell">Loading roster...</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <!-- TAB 3: FORMATION SIMULATOR -->
+      <section class="tab-pane" id="pane-simulator">
+        <div class="pane-header">
+          <div>
+            <h2 class="pane-title">Formation Optimizer Simulator</h2>
+            <p class="pane-desc">Simulate and fine-tune Attack/Defence and Rally/Garrison formations in real time.</p>
+          </div>
+        </div>
+
+        <div class="simulator-layout">
+          <!-- Setup Panel -->
+          <div class="glass-card setup-card">
+            <h3 class="card-title mb-16">Formation Parameters</h3>
+
+            <!-- Generation Preset Selector -->
+            <div class="form-group">
+              <label class="form-label">Generation Preset <span class="form-section-hint">(optional — auto-fills ratios &amp; joiners)</span></label>
+              <div class="gen-preset-row">
+                <select class="form-input" id="sim-gen-select">
+                  <option value="">— Manual Setup —</option>
+                </select>
+                <select class="form-input" id="sim-preset-select" disabled>
+                  <option value="">— Pick formation —</option>
+                </select>
+              </div>
+              <div class="preset-guide-card hidden" id="sim-preset-guide">
+                <div class="preset-guide-place" id="sim-preset-place"></div>
+                <div class="preset-guide-callers" id="sim-preset-callers"></div>
+                <div class="preset-guide-joiners" id="sim-preset-joiners"></div>
+                <div class="preset-guide-notes" id="sim-preset-notes"></div>
+              </div>
+            </div>
+
+            <div class="form-group">
+              <label class="form-label">Battle Mode</label>
+              <div class="toggle-segmented" id="sim-mode-toggle">
+                <button class="segment-btn active" data-value="attack">
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M14.5 10c-.83 0-1.5-.67-1.5-1.5v-5c0-.83.67-1.5 1.5-1.5s1.5.67 1.5 1.5v5c0 .83-.67 1.5-1.5 1.5z"/>
+                    <path d="M20.5 10H19V8.5c0-.83.67-1.5 1.5-1.5s1.5.67 1.5 1.5-.67 1.5-1.5 1.5z"/>
+                    <path d="M9.5 14c.83 0 1.5.67 1.5 1.5v5c0 .83-.67 1.5-1.5 1.5S8 21.33 8 20.5v-5c0-.83.67-1.5 1.5-1.5z"/>
+                    <path d="M3.5 14H5v1.5c0 .83-.67 1.5-1.5 1.5S2 16.33 2 15.5 2.67 14 3.5 14z"/>
+                    <path d="M14 14.5c0-.83.67-1.5 1.5-1.5h5c.83 0 1.5.67 1.5 1.5s-.67 1.5-1.5 1.5h-5c-.83 0-1.5-.67-1.5-1.5z"/>
+                    <path d="M15.5 19H14v1.5c0 .83.67 1.5 1.5 1.5s1.5-.67 1.5-1.5-.67-1.5-1.5-1.5z"/>
+                    <path d="M10 9.5C10 8.67 9.33 8 8.5 8h-5C2.67 8 2 8.67 2 9.5S2.67 11 3.5 11h5c.83 0 1.5-.67 1.5-1.5z"/>
+                    <path d="M8.5 5H10V3.5C10 2.67 9.33 2 8.5 2S7 2.67 7 3.5 7.67 5 8.5 5z"/>
+                  </svg>
+                  Attack
+                </button>
+                <button class="segment-btn" data-value="defence">
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M12 22s-8-4.5-8-11.8A8 8 0 0 1 12 2a8 8 0 0 1 8 8.2c0 7.3-8 11.8-8 11.8z"/>
+                  </svg>
+                  Defence
+                </button>
+              </div>
+            </div>
+
+            <div class="form-group">
+              <label class="form-label">Formation Structure</label>
+              <div class="toggle-segmented" id="sim-type-toggle">
+                <button class="segment-btn active" data-value="rally">
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"/>
+                    <line x1="4" y1="22" x2="4" y2="15"/>
+                  </svg>
+                  Rally
+                </button>
+                <button class="segment-btn" data-value="garrison">
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>
+                    <polyline points="9 22 9 12 15 12 15 22"/>
+                  </svg>
+                  Garrison
+                </button>
+              </div>
+            </div>
+
+            <div class="form-group">
+              <div class="label-with-meta">
+                <label class="form-label">Troop Ratio Percentages</label>
+                <span class="ratio-sum-badge valid" id="ratio-sum-badge">Total: 100%</span>
+              </div>
+
+              <!-- Infantry Slider -->
+              <div class="slider-row">
+                <div class="slider-label">
+                  <span class="troop-bullet inf"></span>
+                  <span>Infantry</span>
+                </div>
+                <input type="range" class="range-slider" id="slider-inf" min="0" max="100" value="50">
+                <div class="slider-val-wrap">
+                  <input type="number" class="num-input" id="num-inf" min="0" max="100" value="50">%
+                </div>
+              </div>
+
+              <!-- Lancers Slider -->
+              <div class="slider-row">
+                <div class="slider-label">
+                  <span class="troop-bullet lan"></span>
+                  <span>Lancers</span>
+                </div>
+                <input type="range" class="range-slider" id="slider-lan" min="0" max="100" value="20">
+                <div class="slider-val-wrap">
+                  <input type="number" class="num-input" id="num-lan" min="0" max="100" value="20">%
+                </div>
+              </div>
+
+              <!-- Marksman Slider -->
+              <div class="slider-row">
+                <div class="slider-label">
+                  <span class="troop-bullet mrk"></span>
+                  <span>Marksman</span>
+                </div>
+                <input type="range" class="range-slider" id="slider-mrk" min="0" max="100" value="30">
+                <div class="slider-val-wrap">
+                  <input type="number" class="num-input" id="num-mrk" min="0" max="100" value="30">%
+                </div>
+              </div>
+
+              <div class="preset-pills">
+                <span class="preset-hint">Presets:</span>
+                <button class="btn-preset" data-inf="50" data-lan="20" data-mrk="30">50 / 20 / 30</button>
+                <button class="btn-preset" data-inf="60" data-lan="20" data-mrk="20">60 / 20 / 20</button>
+                <button class="btn-preset" data-inf="40" data-lan="30" data-mrk="30">40 / 30 / 30</button>
+                <button class="btn-preset" data-inf="34" data-lan="33" data-mrk="33">Balanced</button>
+              </div>
+            </div>
+
+            <div class="form-group">
+              <label class="form-label">Formation Capacity</label>
+              <input type="number" class="form-input" id="sim-capacity" value="1500000" placeholder="e.g. 1,500,000">
+              <div class="preset-pills mt-8">
+                <button class="btn-preset" data-capacity="1200000">1.2M</button>
+                <button class="btn-preset" data-capacity="1500000">1.5M</button>
+                <button class="btn-preset" data-capacity="2000000">2.0M</button>
+                <button class="btn-preset" data-capacity="2500000">2.5M</button>
+              </div>
+            </div>
+
+            <button class="btn btn-primary btn-block btn-lg" id="btn-run-simulation">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/>
+              </svg>
+              Run Calculation
+            </button>
+          </div>
+
+          <!-- Results Panel -->
+          <div class="glass-card results-card" id="sim-results-card">
+            <div class="results-placeholder" id="sim-placeholder">
+              <div class="placeholder-icon">
+                <svg width="52" height="52" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round" opacity="0.4">
+                  <circle cx="12" cy="12" r="10"/><line x1="22" y1="12" x2="18" y2="12"/>
+                  <line x1="6" y1="12" x2="2" y2="12"/><line x1="12" y1="6" x2="12" y2="2"/>
+                  <line x1="12" y1="22" x2="12" y2="18"/><circle cx="12" cy="12" r="2"/>
+                </svg>
+              </div>
+              <h3>Ready to Calculate</h3>
+              <p>Configure your formation parameters on the left and click <strong>Run Calculation</strong> to view the optimal troop breakdown.</p>
+            </div>
+
+            <div class="results-content hidden" id="sim-content">
+              <div class="result-header-summary">
+                <div>
+                  <h3 class="card-title" id="sim-result-title">Formation Result</h3>
+                  <div class="result-meta" id="sim-result-meta">Status: Exact</div>
+                </div>
+                <div class="fill-meter">
+                  <div class="fill-meter-number" id="sim-fill-pct">100%</div>
+                  <div class="fill-meter-label">Capacity Filled</div>
+                </div>
+              </div>
+
+              <!-- Comparison bars -->
+              <div class="target-actual-grid">
+                <div class="target-card">
+                  <div class="ta-label">Total Assigned</div>
+                  <div class="ta-val" id="sim-total-assigned">0</div>
+                </div>
+                <div class="target-card">
+                  <div class="ta-label">Target Capacity</div>
+                  <div class="ta-val" id="sim-target-capacity">0</div>
+                </div>
+                <div class="target-card">
+                  <div class="ta-label">Players Deployed</div>
+                  <div class="ta-val" id="sim-players-count">0</div>
+                </div>
+              </div>
+
+              <!-- Garrison Buffer & Solo Reinforcements Callout -->
+              <div class="garrison-gap-card hidden" id="sim-garrison-gap-card">
+                <div class="garrison-gap-header">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+                  </svg>
+                  <span>Garrison Buffer & Solos</span>
+                </div>
+                <div class="garrison-gap-body">
+                  <div class="garrison-gap-stat">
+                    <span class="garrison-gap-label">Base Capacity</span>
+                    <strong id="sim-garrison-base">0</strong>
+                  </div>
+                  <div class="garrison-gap-stat">
+                    <span class="garrison-gap-label">Buffered Target (1.67x)</span>
+                    <strong id="sim-garrison-target">0</strong>
+                  </div>
+                  <div class="garrison-gap-stat highlight">
+                    <span class="garrison-gap-label">Incoming Solos Needed</span>
+                    <strong id="sim-garrison-gap">+0 troops</strong>
+                  </div>
+                </div>
+              </div>
+
+              <div class="mt-24">
+                <h4 class="subheading">Target vs Actual Breakdown</h4>
+                <div class="comparison-bars" id="sim-comparison-bars">
+                  <!-- Generated via JS -->
+                </div>
+              </div>
+
+              <div class="mt-24">
+                <h4 class="subheading">Assigned Player March Orders</h4>
+                <div class="assignments-table-wrap">
+                  <table class="data-table small">
+                    <thead>
+                      <tr>
+                        <th>Player</th>
+                        <th>Troop Type</th>
+                        <th>Assigned Count</th>
+                      </tr>
+                    </thead>
+                    <tbody id="sim-assignments-tbody">
+                      <!-- Generated via JS -->
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+
+              <!-- Top 4 Joiners Card -->
+              <div class="joiners-card hidden" id="sim-joiners-card">
+                <div class="joiners-card-header">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/>
+                    <path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+                  </svg>
+                  <span>Top 4 Joiners (Hero Optimization)</span>
+                </div>
+                <div class="joiners-list" id="sim-joiners-list">
+                  <!-- Generated via JS -->
+                </div>
+                <p class="joiners-note">Only the 1st expedition skill of the first 4 joiners activates in rally/garrison. Sorted by star ★ &amp; skill score.</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- TAB 4: RULES CONFIGURATION -->
+      <section class="tab-pane" id="pane-rules">
+        <div class="pane-header">
+          <div>
+            <h2 class="pane-title">Optimizer Rules &amp; Weights</h2>
+            <p class="pane-desc">Edit optimizer weighting parameters stored in <code>config/rules.json</code>. (Owner Only)</p>
+          </div>
+          <div class="header-actions">
+            <button class="btn btn-primary" id="btn-save-rules">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/>
+                <polyline points="17 21 17 13 7 13 7 21"/>
+                <polyline points="7 3 7 8 15 8"/>
+              </svg>
+              Save Changes
+            </button>
+          </div>
+        </div>
+
+        <div class="rules-layout">
+          <div class="glass-card">
+            <h3 class="card-title mb-16">Battle Priority Order</h3>
+            <p class="text-muted mb-20">Specify which troop types take priority for Attack vs Defence formations.</p>
+
+            <div class="form-group">
+              <label class="form-label">Attack Importance (Comma-separated: infantry, lancers, marksman)</label>
+              <input type="text" class="form-input" id="rule-attack-order" value="marksman, lancers, infantry">
+            </div>
+
+            <div class="form-group">
+              <label class="form-label">Defence Importance (Comma-separated: infantry, lancers, marksman)</label>
+              <input type="text" class="form-input" id="rule-defence-order" value="infantry, lancers, marksman">
+            </div>
+          </div>
+
+          <div class="glass-card">
+            <h3 class="card-title mb-16">Multiplier Weights</h3>
+            <div class="form-group">
+              <label class="form-label">Helios Bonus Multiplier</label>
+              <input type="number" class="form-input" id="rule-helios-bonus" step="0.1" value="1.5">
+              <span class="form-help">Extra score weight awarded to Helios troop units.</span>
+            </div>
+
+            <div class="form-group">
+              <label class="form-label">FC Level Weight Multiplier</label>
+              <input type="number" class="form-input" id="rule-fc-weight" step="0.1" value="1.0">
+              <span class="form-help">Linear weight applied to Fire Crystal / Troop levels.</span>
+            </div>
+          </div>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <!-- MODAL: ADD / EDIT PLAYER -->
+  <div class="modal-overlay" id="player-modal">
+    <div class="modal-container">
+      <div class="modal-header">
+        <h3 class="modal-title" id="player-modal-title">Add Player to Roster</h3>
+        <button class="modal-close" id="player-modal-close">&times;</button>
+      </div>
+
+      <form id="player-form">
+        <input type="hidden" id="form-player-id">
+
+        <div class="modal-body">
+          <div class="form-section-title">Identity &amp; Limits</div>
+          <div class="form-grid-2">
+            <div class="form-group">
+              <label class="form-label" for="form-name">Player Name *</label>
+              <input type="text" class="form-input" id="form-name" required placeholder="e.g. Spartan">
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="form-game-id">In-Game Player ID *</label>
+              <input type="text" class="form-input" id="form-game-id" required placeholder="e.g. 521388007">
+            </div>
+          </div>
+
+          <div class="form-grid-2">
+            <div class="form-group">
+              <label class="form-label" for="form-march-limit">March Limit *</label>
+              <input type="number" class="form-input" id="form-march-limit" required placeholder="e.g. 144000">
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="form-discord-id">Discord User ID (Optional)</label>
+              <input type="text" class="form-input" id="form-discord-id" placeholder="Leave blank for manual entry">
+            </div>
+          </div>
+
+          <div class="form-section-title mt-20">Troop Types &amp; Levels</div>
+
+          <!-- Infantry -->
+          <div class="troop-edit-card">
+            <div class="troop-edit-header">
+              <div class="troop-edit-name"><span class="troop-bullet inf"></span> Infantry</div>
+              <label class="checkbox-label">
+                <input type="checkbox" id="form-inf-helios">
+                <span>Has Helios</span>
+              </label>
+            </div>
+            <div class="form-grid-2">
+              <div class="form-group">
+                <label class="form-label">FC / Level *</label>
+                <input type="number" class="form-input" id="form-inf-level" required min="1" max="30" value="5">
+              </div>
+              <div class="form-group" id="form-inf-qty-wrap">
+                <label class="form-label">Helios Quantity</label>
+                <input type="number" class="form-input" id="form-inf-qty" placeholder="Required if Helios checked">
+              </div>
+            </div>
+          </div>
+
+          <!-- Lancers -->
+          <div class="troop-edit-card">
+            <div class="troop-edit-header">
+              <div class="troop-edit-name"><span class="troop-bullet lan"></span> Lancers</div>
+              <label class="checkbox-label">
+                <input type="checkbox" id="form-lan-helios">
+                <span>Has Helios</span>
+              </label>
+            </div>
+            <div class="form-grid-2">
+              <div class="form-group">
+                <label class="form-label">FC / Level *</label>
+                <input type="number" class="form-input" id="form-lan-level" required min="1" max="30" value="5">
+              </div>
+              <div class="form-group" id="form-lan-qty-wrap">
+                <label class="form-label">Helios Quantity</label>
+                <input type="number" class="form-input" id="form-lan-qty" placeholder="Required if Helios checked">
+              </div>
+            </div>
+          </div>
+
+          <!-- Marksman -->
+          <div class="troop-edit-card">
+            <div class="troop-edit-header">
+              <div class="troop-edit-name"><span class="troop-bullet mrk"></span> Marksman</div>
+              <label class="checkbox-label">
+                <input type="checkbox" id="form-mrk-helios">
+                <span>Has Helios</span>
+              </label>
+            </div>
+            <div class="form-grid-2">
+              <div class="form-group">
+                <label class="form-label">FC / Level *</label>
+                <input type="number" class="form-input" id="form-mrk-level" required min="1" max="30" value="5">
+              </div>
+              <div class="form-group" id="form-mrk-qty-wrap">
+                <label class="form-label">Helios Quantity</label>
+                <input type="number" class="form-input" id="form-mrk-qty" placeholder="Required if Helios checked">
+              </div>
+            </div>
+          </div>
+
+          <div class="form-section-title mt-20">Hero Levels <span class="form-section-hint">(optional — for joiner optimization)</span></div>
+          <p class="form-help mb-12">Track key joiner heroes. Stars 1–5, Expedition Skill Level 1–5. Only the 1st skill of the first 4 joiners activates.</p>
+
+          <div class="heroes-grid" id="heroes-grid">
+            <!-- Dynamically populated by JS -->
+          </div>
+
+          <div class="hero-add-row">
+            <select class="form-input hero-add-select" id="hero-add-name">
+              <option value="">— Select hero —</option>
+              <option>Jessie</option><option>Seoyoon</option><option>Jasser</option>
+              <option>Patrick</option><option>Sergey</option><option>Ling Xue</option>
+              <option>Norah</option><option>Edith</option><option>Philly</option>
+              <option>Ahmose</option><option>Alonso</option><option>Blanchette</option>
+              <option>Bradley</option><option>Eleonora</option><option>Fred</option>
+              <option>Freya</option><option>Gatot</option><option>Gordon</option>
+              <option>Gregory</option><option>Gwen</option><option>Hendrik</option>
+              <option>Hervor</option><option>Hector</option><option>Jeronimo</option>
+              <option>Karol</option><option>Ligeia</option><option>Lloyd</option>
+              <option>Logan</option><option>Lynn</option><option>Magnus</option>
+              <option>Mia</option><option>Molly</option><option>Natalia</option>
+              <option>Renee</option><option>Reina</option><option>Rufus</option>
+              <option>Sonya</option><option>Wayne</option><option>Wu Ming</option>
+              <option>Xura</option><option>Zinman</option>
+            </select>
+            <button type="button" class="btn btn-secondary btn-sm" id="btn-add-hero">+ Add Hero</button>
+          </div>
+        </div>
+
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" id="player-modal-cancel">Cancel</button>
+          <button type="submit" class="btn btn-primary" id="player-modal-submit">Save Player</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- MODAL: DELETE CONFIRMATION -->
+  <div class="modal-overlay" id="delete-modal">
+    <div class="modal-container small">
+      <div class="modal-header">
+        <h3 class="modal-title">Delete Player</h3>
+        <button class="modal-close" id="delete-modal-close">&times;</button>
+      </div>
+      <div class="modal-body">
+        <p>Are you sure you want to delete <strong id="delete-player-name">this player</strong>?</p>
+        <p class="text-danger mt-8 text-sm">This action cannot be undone and will permanently remove their registered troop data.</p>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" id="delete-modal-cancel">Cancel</button>
+        <button class="btn btn-danger" id="delete-modal-confirm">Delete Permanently</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL: AUTH / LOGIN -->
+  <div class="modal-overlay" id="auth-modal">
+    <div class="modal-container small">
+      <div class="modal-header">
+        <h3 class="modal-title">Command Access Login</h3>
+        <button class="modal-close" id="auth-modal-close">&times;</button>
+      </div>
+      <div class="modal-body">
+        <form id="auth-passkey-form">
+          <div class="form-group">
+            <label class="form-label" for="auth-passkey-input">Admin Master Passkey</label>
+            <input type="password" class="form-input" id="auth-passkey-input" placeholder="Enter ADMIN_PANEL_KEY" required>
+            <span class="form-help">Default passkey is <code>admin123</code> (configured in .env).</span>
+          </div>
+          <button type="submit" class="btn btn-primary btn-block">Log In with Passkey</button>
+        </form>
+
+        <div class="auth-divider" id="auth-oauth-divider">
+          <span>OR</span>
+        </div>
+
+        <div id="auth-oauth-wrap">
+          <a href="/api/auth/discord/login" class="btn btn-discord btn-block">
+            <svg width="18" height="18" viewBox="0 0 127.14 96.36" fill="currentColor">
+              <path d="M107.7 8.07A105.15 105.15 0 0 0 81.47 0a72.06 72.06 0 0 0-3.36 6.83 97.68 97.68 0 0 0-29.11 0A72.37 72.37 0 0 0 45.64 0a105.89 105.89 0 0 0-26.25 8.09C2.79 32.65-1.71 56.6.54 80.21a105.73 105.73 0 0 0 32.17 16.15 77.7 77.7 0 0 0 6.89-11.11 68.42 68.42 0 0 1-10.85-5.18c.91-.66 1.8-1.34 2.66-2a75.57 75.57 0 0 0 64.32 0c.87.71 1.76 1.39 2.66 2a68.68 68.68 0 0 1-10.87 5.19 77 77 0 0 0 6.89 11.1 105.25 105.25 0 0 0 32.19-16.14c2.64-27.38-4.51-51.11-18.9-72.15zM42.45 65.69C36.18 65.69 31 60 31 53s5-12.74 11.43-12.74S54 46 53.89 53s-5.05 12.69-11.44 12.69zm42.24 0C78.41 65.69 73.25 60 73.25 53s5-12.74 11.44-12.74S96.23 46 96.12 53s-5.04 12.69-11.43 12.69z"/>
+            </svg>
+            Log In with Discord
+          </a>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- TOAST CONTAINER -->
+  <div class="toast-container" id="toast-container"></div>
+
+  <script src="/static/js/app.js"></script>
+
+  <!-- Hamburger mobile menu script -->
+  <script>
+    const hamburger = document.getElementById('hamburger-btn');
+    const headerCenter = document.getElementById('header-center');
+    hamburger.addEventListener('click', () => {
+      headerCenter.classList.toggle('open');
+      hamburger.classList.toggle('active');
+    });
+    // Close on tab click
+    document.querySelectorAll('.nav-tab').forEach(tab => {
+      tab.addEventListener('click', () => {
+        headerCenter.classList.remove('open');
+        hamburger.classList.remove('active');
+      });
+    });
+  </script>
+</body>
+</html>

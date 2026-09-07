@@ -1,0 +1,18 @@
+{
+  "attack": {
+    "infantry_weight": 3.0,
+    "lancer_weight": 1.5,
+    "marksman_weight": 3.0,
+    "helios_weight": 2.0,
+    "fc_weight": 1.0
+  },
+  "defence": {
+    "infantry_weight": 3.5,
+    "lancer_weight": 1.5,
+    "marksman_weight": 0.5,
+    "helios_weight": 2.0,
+    "fc_weight": 1.0
+  },
+  "rally_modifier": 1.0,
+  "garrison_modifier": 1.0
+}
