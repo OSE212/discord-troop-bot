@@ -61,6 +61,7 @@ body {
   min-height: 100vh;
   line-height: 1.5;
   -webkit-font-smoothing: antialiased;
+  overflow-x: hidden;
 }
 
 /* ============================================================
@@ -151,6 +152,7 @@ body {
   display: flex;
   justify-content: center;
   align-items: center;
+  min-width: 0;
 }
 
 .nav-tabs {
@@ -233,6 +235,7 @@ body {
   border: 1px solid var(--border-subtle);
   padding: 4px 6px 4px 10px;
   border-radius: 20px;
+  flex-shrink: 0;
 }
 
 .user-badge {
@@ -2139,9 +2142,119 @@ body {
 /* ============================================================
    RESPONSIVE — TABLET  (≤ 1024px)
    ============================================================ */
+/* ============================================================
+   RESPONSIVE — DESKTOP ADAPTIVE (≤ 1440px, ≤ 1280px, ≤ 1140px)
+   Prevents header items from overflowing on standard desktop/laptop displays
+   ============================================================ */
+@media (max-width: 1440px) {
+  .app-header {
+    padding: 0 20px;
+    gap: 12px;
+  }
+
+  .brand-subtitle {
+    display: none;
+  }
+
+  .nav-tab {
+    padding: 6px 12px;
+    font-size: 12.5px;
+    gap: 5px;
+  }
+
+  .header-right {
+    gap: 12px;
+  }
+
+  .server-select {
+    max-width: 140px;
+    font-size: 12px;
+  }
+}
+
+@media (max-width: 1280px) {
+  .app-header {
+    padding: 0 16px;
+    gap: 10px;
+  }
+
+  .nav-tab {
+    padding: 6px 10px;
+    font-size: 12px;
+    gap: 4px;
+  }
+
+  /* Compact Invite Bot button (icon only on smaller desktop screens) */
+  .btn-discord-invite span {
+    display: none;
+  }
+
+  .btn-discord-invite {
+    padding: 6px 10px;
+    border-radius: 16px;
+  }
+
+  /* Compact status: indicator dot only */
+  .status-text {
+    display: none;
+  }
+
+  .header-right {
+    gap: 8px;
+  }
+
+  .server-select {
+    max-width: 120px;
+  }
+
+  .user-name {
+    max-width: 85px;
+  }
+
+  .user-pill {
+    padding: 3px 6px 3px 8px;
+    gap: 6px;
+  }
+}
+
+@media (max-width: 1140px) {
+  .app-header {
+    padding: 0 12px;
+    gap: 8px;
+  }
+
+  .nav-tab {
+    padding: 5px 8px;
+    font-size: 11.5px;
+  }
+
+  .nav-tab .tab-icon {
+    width: 13px;
+    height: 13px;
+  }
+
+  .logo-mark {
+    width: 38px;
+    height: 38px;
+  }
+
+  .logo-img {
+    width: 34px;
+    height: 34px;
+  }
+
+  .brand-title {
+    font-size: 15px;
+  }
+}
+
+/* ============================================================
+   RESPONSIVE — TABLET & MOBILE (≤ 1024px)
+   ============================================================ */
 @media (max-width: 1024px) {
+  /* ---- LAYOUT ---- */
   .main-content {
-    padding: 24px 20px;
+    padding: 24px 16px;
   }
 
   .metrics-grid {
@@ -2161,32 +2274,6 @@ body {
     width: 100%;
   }
 
-  /* Hide brand subtitle to save space */
-  .brand-subtitle {
-    display: none;
-  }
-
-  /* Nav tabs: smaller padding */
-  .nav-tab {
-    padding: 7px 12px;
-    font-size: 12px;
-  }
-
-  /* Header right: tighten gaps */
-  .header-right {
-    gap: 10px;
-  }
-
-  /* Hide "Online" status text on tablet */
-  .status-text {
-    display: none;
-  }
-}
-
-/* ============================================================
-   RESPONSIVE — MOBILE  (≤ 768px)
-   ============================================================ */
-@media (max-width: 768px) {
   /* ---- HEADER ---- */
   :root {
     --header-height: 60px;
@@ -2266,7 +2353,7 @@ body {
     font-size: 14px;
   }
 
-  /* Header-right: hidden in the header bar on mobile */
+  /* Header-right: hidden in the header bar on mobile/tablet */
   .header-right {
     display: none;
   }
@@ -2308,10 +2395,13 @@ body {
     box-sizing: border-box;
   }
 
-  /* Invite button: full width */
+  /* Invite button: full width with label inside dropdown */
   .header-center .btn-discord-invite {
     width: 100%;
     justify-content: center;
+  }
+  .header-center .btn-discord-invite span {
+    display: inline;
   }
 
   /* ---- MAIN CONTENT ---- */
