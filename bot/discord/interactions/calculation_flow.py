@@ -102,12 +102,16 @@ class RatioCapacityModal(discord.ui.Modal, title="Calculate - Ratio & Capacity")
             repository = PlayerRepository(session)
             service = FormationService(repository, self.config)
             try:
+                guild_id = str(interaction.guild_id) if interaction.guild_id else None
                 result = service.calculate(
                     mode=self.mode,
                     formation_type=self.formation_type,
                     ratio=ratio,
                     capacity=capacity,
+                    guild_id=guild_id,
                 )
+
+
             except (InvalidRatioError, InvalidCapacityError) as exc:
                 await interaction.response.send_message(str(exc), ephemeral=True)
                 return

@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import base64
 import hashlib
 import hmac
 import json
@@ -49,6 +50,7 @@ def serialize_player(player: Player) -> dict[str, Any]:
 
     return {
         "id": player.id,
+        "guild_id": player.guild_id,
         "discord_user_id": player.discord_user_id,
         "game_player_id": player.game_player_id,
         "name": player.name,
@@ -57,6 +59,7 @@ def serialize_player(player: Player) -> dict[str, Any]:
         "created_at": player.created_at.isoformat() if player.created_at else None,
         "updated_at": player.updated_at.isoformat() if player.updated_at else None,
         "troops": troops,
+
         "heroes": [
             {
                 "name": h.hero_name,
@@ -93,32 +96,49 @@ def _apply_heroes_to_player(
     repo.session.flush()
 
 
-def _sign_session(role: str, user_name: str, secret: str) -> str:
-    timestamp = str(int(time.time()))
-    payload = f"{role}:{user_name}:{timestamp}"
-    signature = hmac.new(secret.encode(), payload.encode(), hashlib.sha256).hexdigest()
-    return f"{payload}:{signature}"
+def _sign_session(data: dict[str, Any], secret: str) -> str:
+    raw = json.dumps(data, separators=(",", ":"))
+    payload = base64.urlsafe_b64encode(raw.encode()).decode()
+    sig = hmac.new(secret.encode(), payload.encode(), hashlib.sha256).hexdigest()
+    return f"{payload}.{sig}"
 
 
-def _verify_session(token: str, secret: str, max_age_seconds: int = 86400 * 7) -> Optional[dict[str, str]]:
+def _verify_session(token: str, secret: str, max_age_seconds: int = 86400 * 7) -> Optional[dict[str, Any]]:
     try:
+        if "." in token:
+            payload, sig = token.split(".", 1)
+            expected = hmac.new(secret.encode(), payload.encode(), hashlib.sha256).hexdigest()
+            if not hmac.compare_digest(sig, expected):
+                return None
+            data = json.loads(base64.urlsafe_b64decode(payload.encode()).decode())
+            if time.time() - data.get("timestamp", 0) > max_age_seconds:
+                return None
+            return data
+
+        # Legacy 4-colon format: role:name:timestamp:sig
         parts = token.split(":")
-        if len(parts) != 4:
-            return None
-        role, user_name, timestamp_str, sig = parts
-        payload = f"{role}:{user_name}:{timestamp_str}"
-        expected = hmac.new(secret.encode(), payload.encode(), hashlib.sha256).hexdigest()
-        if not hmac.compare_digest(sig, expected):
-            return None
-        timestamp = int(timestamp_str)
-        if time.time() - timestamp > max_age_seconds:
-            return None
-        return {"role": role, "name": user_name}
+        if len(parts) == 4:
+            role, user_name, timestamp_str, sig = parts
+            payload = f"{role}:{user_name}:{timestamp_str}"
+            expected = hmac.new(secret.encode(), payload.encode(), hashlib.sha256).hexdigest()
+            if not hmac.compare_digest(sig, expected):
+                return None
+            if time.time() - int(timestamp_str) > max_age_seconds:
+                return None
+            return {
+                "user_id": "legacy",
+                "role": role,
+                "name": user_name,
+                "avatar": None,
+                "admin_guilds": [{"id": "*", "name": "🌐 All Servers (Global)"}],
+                "admin_guild_ids": ["*"],
+            }
+        return None
     except Exception:
         return None
 
 
-def get_current_user(request: web.Request) -> Optional[dict[str, str]]:
+def get_current_user(request: web.Request) -> Optional[dict[str, Any]]:
     secret = request.app["settings"].admin_panel_key
     cookie = request.cookies.get("troop_session")
     if not cookie:
@@ -130,6 +150,125 @@ def get_current_user(request: web.Request) -> Optional[dict[str, str]]:
     return _verify_session(cookie, secret)
 
 
+def get_target_guild_id(request: web.Request, user: dict[str, Any]) -> Optional[str]:
+    """Determine the active server/guild ID for multi-tenant data isolation."""
+    guild_id = request.query.get("guild_id") or request.headers.get("X-Guild-Id")
+    user_role = user.get("role", "guest")
+    admin_ids = user.get("admin_guild_ids", [])
+
+    if user_role == "owner":
+        if not guild_id or guild_id in ("*", "all"):
+            return "*"
+        return guild_id
+
+    # For regular admins:
+    if not guild_id or guild_id in ("*", "all"):
+        return admin_ids[0] if admin_ids else None
+
+    if guild_id not in admin_ids:
+        return None
+    return guild_id
+
+
+# --- Bot Info & Guilds Endpoints ---
+
+async def handle_bot_info(request: web.Request) -> web.Response:
+    settings: Settings = request.app["settings"]
+    bot = request.app.get("bot")
+
+    client_id = settings.discord_client_id
+    bot_name = "Troop Command Bot"
+    avatar_url = None
+    server_count = 0
+
+    if bot and getattr(bot, "user", None):
+        client_id = client_id or str(bot.user.id)
+        bot_name = bot.user.name
+        if bot.user.avatar:
+            avatar_url = bot.user.avatar.url
+        server_count = len(getattr(bot, "guilds", []))
+
+    invite_url = ""
+    if client_id:
+        invite_url = (
+            f"https://discord.com/api/oauth2/authorize?client_id={client_id}"
+            f"&permissions=277025778752&scope=bot%20applications.commands"
+        )
+
+    return web.json_response({
+        "client_id": client_id,
+        "bot_name": bot_name,
+        "avatar_url": avatar_url,
+        "server_count": server_count,
+        "invite_url": invite_url,
+        "has_discord_oauth": bool(settings.discord_client_id and settings.discord_client_secret),
+    })
+
+
+async def handle_get_guilds(request: web.Request) -> web.Response:
+    user = get_current_user(request)
+    if not user:
+        return web.json_response({"error": "Unauthorized"}, status=401)
+
+    settings: Settings = request.app["settings"]
+    bot = request.app.get("bot")
+    bot_guilds_map = {str(g.id): g for g in (getattr(bot, "guilds", None) or [])}
+    client_id = settings.discord_client_id or (str(bot.user.id) if bot and getattr(bot, "user", None) else "")
+
+    def make_invite(gid: str) -> str:
+        if not client_id:
+            return ""
+        return (
+            f"https://discord.com/api/oauth2/authorize?client_id={client_id}"
+            f"&permissions=277025778752&scope=bot%20applications.commands&guild_id={gid}"
+        )
+
+    guild_list: list[dict[str, Any]] = []
+
+    if user.get("role") == "owner":
+        guild_list.append({
+            "id": "*",
+            "name": "🌐 All Servers (Global)",
+            "icon": None,
+            "bot_installed": True,
+            "member_count": sum(getattr(g, "member_count", 0) or 0 for g in bot_guilds_map.values()),
+            "invite_url": "",
+        })
+        for gid, g in bot_guilds_map.items():
+            guild_list.append({
+                "id": gid,
+                "name": g.name,
+                "icon": g.icon.url if g.icon else None,
+                "bot_installed": True,
+                "member_count": getattr(g, "member_count", 0) or 0,
+                "invite_url": "",
+            })
+    else:
+        admin_guilds = user.get("admin_guilds", [])
+        for ag in admin_guilds:
+            gid = str(ag.get("id"))
+            name = ag.get("name", "Unknown Server")
+            icon_hash = ag.get("icon")
+            icon_url = (
+                f"https://cdn.discordapp.com/icons/{gid}/{icon_hash}.png"
+                if icon_hash
+                else None
+            )
+            is_installed = gid in bot_guilds_map
+            member_count = getattr(bot_guilds_map[gid], "member_count", None) if is_installed else None
+
+            guild_list.append({
+                "id": gid,
+                "name": name,
+                "icon": icon_url,
+                "bot_installed": is_installed,
+                "member_count": member_count,
+                "invite_url": make_invite(gid) if not is_installed else "",
+            })
+
+    return web.json_response(guild_list)
+
+
 # --- Auth Endpoints ---
 
 async def handle_auth_me(request: web.Request) -> web.Response:
@@ -139,15 +278,19 @@ async def handle_auth_me(request: web.Request) -> web.Response:
     if user:
         return web.json_response({
             "authenticated": True,
-            "role": user["role"],
-            "name": user["name"],
+            "role": user.get("role", "admin"),
+            "name": user.get("name", "User"),
+            "avatar": user.get("avatar"),
             "has_discord_oauth": has_discord_oauth,
+            "admin_guilds": user.get("admin_guilds", []),
         })
     return web.json_response({
         "authenticated": False,
         "role": "guest",
         "name": None,
+        "avatar": None,
         "has_discord_oauth": has_discord_oauth,
+        "admin_guilds": [],
     })
 
 
@@ -161,8 +304,22 @@ async def handle_login_passkey(request: web.Request) -> web.Response:
     settings: Settings = request.app["settings"]
 
     if passkey and passkey == settings.admin_panel_key:
-        token = _sign_session("owner", "Master Owner", settings.admin_panel_key)
-        response = web.json_response({"success": True, "role": "owner", "name": "Master Owner"})
+        session_data = {
+            "user_id": "master_owner",
+            "name": "Master Owner",
+            "avatar": None,
+            "role": "owner",
+            "admin_guilds": [{"id": "*", "name": "🌐 All Servers (Global)"}],
+            "admin_guild_ids": ["*"],
+            "timestamp": int(time.time()),
+        }
+        token = _sign_session(session_data, settings.admin_panel_key)
+        response = web.json_response({
+            "success": True,
+            "role": "owner",
+            "name": "Master Owner",
+            "admin_guilds": session_data["admin_guilds"],
+        })
         response.set_cookie(
             "troop_session",
             token,
@@ -214,6 +371,8 @@ async def handle_discord_callback(request: web.Request) -> web.Response:
     async with ClientSession() as session:
         async with session.post(token_url, data=data, headers=headers) as resp:
             if resp.status != 200:
+                text_err = await resp.text()
+                logger.error("Discord OAuth token exchange error: %s", text_err)
                 return web.Response(text="Failed to exchange Discord OAuth token", status=400)
             token_data = await resp.json()
 
@@ -227,34 +386,59 @@ async def handle_discord_callback(request: web.Request) -> web.Response:
             user_data = await user_resp.json()
 
         user_id = str(user_data.get("id"))
-        username = user_data.get("username", "Discord User")
-
-        # Determine role: Owner or Admin
-        role = "guest"
-        if settings.bot_owner_id and user_id == str(settings.bot_owner_id):
-            role = "owner"
-        else:
-            # Check if user has administrator / manage_server in any guild
-            async with session.get("https://discord.com/api/users/@me/guilds", headers=auth_headers) as guilds_resp:
-                if guilds_resp.status == 200:
-                    guilds = await guilds_resp.json()
-                    for g in guilds:
-                        permissions = int(g.get("permissions", 0))
-                        # Check Administrator (0x8) or Manage Server (0x20)
-                        if (permissions & 0x8) or (permissions & 0x20) or g.get("owner", False):
-                            role = "admin"
-                            break
-
-    if role == "guest":
-        return web.Response(
-            text="Access Denied: You must be a server administrator or the bot owner to access this panel.",
-            status=403,
+        username = user_data.get("global_name") or user_data.get("username", "Discord User")
+        avatar_hash = user_data.get("avatar")
+        avatar_url = (
+            f"https://cdn.discordapp.com/avatars/{user_id}/{avatar_hash}.png"
+            if avatar_hash
+            else None
         )
 
-    token = _sign_session(role, username, settings.admin_panel_key)
-    response = web.HTTPFound("/")
-    response.set_cookie("troop_session", token, max_age=86400 * 7, httponly=True, samesite="Lax")
-    return response
+        admin_guilds_list = []
+        is_bot_owner = bool(settings.bot_owner_id and user_id == str(settings.bot_owner_id))
+
+        # Check user's guilds
+        async with session.get("https://discord.com/api/users/@me/guilds", headers=auth_headers) as guilds_resp:
+            if guilds_resp.status == 200:
+                guilds = await guilds_resp.json()
+                for g in guilds:
+                    permissions = int(g.get("permissions", 0))
+                    # Check Administrator (0x8) or Manage Server (0x20) or guild owner
+                    if g.get("owner", False) or (permissions & 0x8) or (permissions & 0x20):
+                        admin_guilds_list.append({
+                            "id": str(g.get("id")),
+                            "name": g.get("name", "Unknown Server"),
+                            "icon": g.get("icon"),
+                        })
+
+        role = "guest"
+        if is_bot_owner:
+            role = "owner"
+            admin_guilds_list.insert(0, {"id": "*", "name": "🌐 All Servers (Global)", "icon": None})
+        elif admin_guilds_list:
+            role = "admin"
+
+        if role == "guest":
+            return web.Response(
+                text="Access Denied: You must be a server administrator or have 'Manage Server' permission on at least one Discord server to access the admin panel.",
+                status=403,
+            )
+
+        session_data = {
+            "user_id": user_id,
+            "name": username,
+            "avatar": avatar_url,
+            "role": role,
+            "admin_guilds": admin_guilds_list,
+            "admin_guild_ids": [g["id"] for g in admin_guilds_list],
+            "timestamp": int(time.time()),
+        }
+
+        token = _sign_session(session_data, settings.admin_panel_key)
+        response = web.HTTPFound("/")
+        response.set_cookie("troop_session", token, max_age=86400 * 7, httponly=True, samesite="Lax")
+        return response
+
 
 
 # --- Stats Endpoints ---
@@ -264,10 +448,14 @@ async def handle_get_stats(request: web.Request) -> web.Response:
     if not user:
         return web.json_response({"error": "Unauthorized"}, status=401)
 
+    target_guild = get_target_guild_id(request, user)
+    if target_guild is None and user.get("role") != "owner":
+        return web.json_response({"error": "You do not have access to this server."}, status=403)
+
     db = request.app["db"]
     with db.session() as session:
         repo = PlayerRepository(session)
-        players = repo.list_all()
+        players = repo.list_all(guild_id=target_guild)
 
         total = len(players)
         complete = sum(1 for p in players if p.is_complete())
@@ -297,6 +485,7 @@ async def handle_get_stats(request: web.Request) -> web.Response:
         "total_capacity": total_capacity,
         "helios_quantities": helios_counts,
         "average_levels": avg_fc,
+        "guild_id": target_guild,
     })
 
 
@@ -307,13 +496,17 @@ async def handle_list_players(request: web.Request) -> web.Response:
     if not user:
         return web.json_response({"error": "Unauthorized"}, status=401)
 
+    target_guild = get_target_guild_id(request, user)
+    if target_guild is None and user.get("role") != "owner":
+        return web.json_response({"error": "You do not have access to this server."}, status=403)
+
     q = request.query.get("q", "").strip().lower()
     filter_mode = request.query.get("filter", "all").strip().lower()
 
     db = request.app["db"]
     with db.session() as session:
         repo = PlayerRepository(session)
-        players = repo.list_all()
+        players = repo.list_all(guild_id=target_guild)
 
         results = []
         for p in players:
@@ -340,6 +533,7 @@ async def handle_list_players(request: web.Request) -> web.Response:
             results.append(serialize_player(p))
 
     return web.json_response(results)
+
 
 
 async def handle_get_player(request: web.Request) -> web.Response:
@@ -385,7 +579,14 @@ async def handle_create_player(request: web.Request) -> web.Response:
 
     troops_data = data.get("troops", {})
 
+    target_guild = get_target_guild_id(request, user)
+    if target_guild is None and user.get("role") != "owner":
+        return web.json_response({"error": "You do not have access to this server."}, status=403)
+
+    guild_to_set = target_guild if target_guild and target_guild != "*" else None
+
     draft = RegistrationDraft(discord_user_id=discord_id)
+    draft.guild_id = guild_to_set
     draft.game_player_id = game_player_id
     draft.name = name
     draft.march_limit = march_limit
@@ -420,12 +621,13 @@ async def handle_create_player(request: web.Request) -> web.Response:
     try:
         with db.session() as session:
             repo = PlayerRepository(session)
-            existing = repo.get_by_discord_id(discord_id)
+            existing = repo.get_by_discord_id(discord_id, guild_id=guild_to_set)
             if existing is not None:
                 return web.json_response({"error": f"A player with Discord/Identifier '{discord_id}' already exists."}, status=409)
 
             service = PlayerService(repo)
             player = service.register_player(draft)
+
 
             # Apply hero data if present
             heroes_data = data.get("heroes", [])
@@ -585,11 +787,16 @@ async def handle_import_players_csv(request: web.Request) -> web.Response:
     if not csv_text.strip():
         return web.json_response({"error": "No CSV content provided."}, status=400)
 
+    target_guild = get_target_guild_id(request, user)
+    if target_guild is None and user.get("role") != "owner":
+        return web.json_response({"error": "You do not have access to this server."}, status=403)
+    guild_to_set = target_guild if target_guild and target_guild != "*" else None
+
     db = request.app["db"]
     try:
         with db.session() as session:
             importer = CsvImporter(session)
-            result = importer.import_text(csv_text)
+            result = importer.import_text(csv_text, guild_id=guild_to_set)
             return web.json_response(result.to_dict())
     except Exception as exc:
         logger.exception("Error during CSV import")
@@ -602,6 +809,10 @@ async def handle_calculate(request: web.Request) -> web.Response:
     user = get_current_user(request)
     if not user:
         return web.json_response({"error": "Unauthorized"}, status=401)
+
+    target_guild = get_target_guild_id(request, user)
+    if target_guild is None and user.get("role") != "owner":
+        return web.json_response({"error": "You do not have access to this server."}, status=403)
 
     try:
         data = await request.json()
@@ -649,7 +860,9 @@ async def handle_calculate(request: web.Request) -> web.Response:
                 formation_type=formation_type,
                 ratio=ratio,
                 capacity=capacity,
+                guild_id=target_guild if target_guild and target_guild != "*" else None,
             )
+
         except (InvalidRatioError, InvalidCapacityError) as exc:
             return web.json_response({"error": str(exc)}, status=400)
 

@@ -9,6 +9,9 @@ const state = {
   stats: null,
   activeFilter: 'all',
   searchQuery: '',
+  currentGuildId: localStorage.getItem('troop_guild_id') || '*',
+  guilds: [],
+  botInfo: null,
   sim: {
     mode: 'attack',
     formation_type: 'rally',
@@ -31,6 +34,11 @@ const elements = {
   // Tabs
   navTabs: document.querySelectorAll('.nav-tab'),
   tabPanes: document.querySelectorAll('.tab-pane'),
+  // Server picker & invite
+  serverPickerWrap: document.getElementById('server-picker-wrap'),
+  serverSelect: document.getElementById('server-select'),
+  btnHeaderInvite: document.getElementById('btn-header-invite'),
+  btnGuideInvite: document.getElementById('btn-guide-invite'),
   // Auth
   userRoleBadge: document.getElementById('user-role-badge'),
   userDisplayName: document.getElementById('user-display-name'),
@@ -41,6 +49,7 @@ const elements = {
   authPasskeyInput: document.getElementById('auth-passkey-input'),
   authOauthWrap: document.getElementById('auth-oauth-wrap'),
   authOauthDivider: document.getElementById('auth-oauth-divider'),
+
   // Stats
   statTotalPlayers: document.getElementById('stat-total-players'),
   statCompletePlayers: document.getElementById('stat-complete-players'),
@@ -156,9 +165,16 @@ function showToast(message, type = 'info') {
 // API client
 async function fetchApi(url, options = {}) {
   try {
+    const headers = {
+      'Content-Type': 'application/json',
+      ...(options.headers || {}),
+    };
+    if (state.currentGuildId && state.currentGuildId !== '*') {
+      headers['X-Guild-Id'] = state.currentGuildId;
+    }
     const res = await fetch(url, {
-      headers: { 'Content-Type': 'application/json' },
       ...options,
+      headers,
     });
     if (res.status === 401) {
       state.user = { authenticated: false, role: 'guest', name: null };
@@ -176,6 +192,62 @@ async function fetchApi(url, options = {}) {
   }
 }
 
+// Bot Info & Invite Link
+async function loadBotInfo() {
+  try {
+    const res = await fetch('/api/bot/info');
+    if (res.ok) {
+      const data = await res.json();
+      state.botInfo = data;
+      if (data.invite_url) {
+        if (elements.btnHeaderInvite) elements.btnHeaderInvite.href = data.invite_url;
+        if (elements.btnGuideInvite) elements.btnGuideInvite.href = data.invite_url;
+      }
+    }
+  } catch (e) {
+    console.warn('Could not load bot info:', e);
+  }
+}
+
+// Guilds / Multi-Server Picker
+async function loadGuilds() {
+  if (!state.user.authenticated) {
+    if (elements.serverPickerWrap) elements.serverPickerWrap.style.display = 'none';
+    return;
+  }
+  try {
+    const guilds = await fetchApi('/api/guilds');
+    state.guilds = guilds;
+
+    if (!elements.serverSelect) return;
+    elements.serverSelect.innerHTML = '';
+
+    if (!guilds || guilds.length === 0) {
+      if (elements.serverPickerWrap) elements.serverPickerWrap.style.display = 'none';
+      return;
+    }
+
+    if (elements.serverPickerWrap) elements.serverPickerWrap.style.display = 'flex';
+
+    // Verify current selection is in list
+    const validIds = guilds.map(g => g.id);
+    if (!validIds.includes(state.currentGuildId)) {
+      state.currentGuildId = validIds[0] || '*';
+      localStorage.setItem('troop_guild_id', state.currentGuildId);
+    }
+
+    guilds.forEach(g => {
+      const opt = document.createElement('option');
+      opt.value = g.id;
+      opt.textContent = g.name + (!g.bot_installed ? ' (➕ Add Bot)' : '');
+      if (g.id === state.currentGuildId) opt.selected = true;
+      elements.serverSelect.appendChild(opt);
+    });
+  } catch (err) {
+    console.warn('Failed to load guilds:', err);
+  }
+}
+
 // Auth Lifecycle
 async function checkAuth() {
   try {
@@ -186,8 +258,13 @@ async function checkAuth() {
       elements.authOauthWrap.style.display = 'none';
       if (elements.authOauthDivider) elements.authOauthDivider.style.display = 'none';
     }
+    await loadBotInfo();
+    if (data.authenticated) {
+      await loadGuilds();
+    }
   } catch (err) {
     renderAuth();
+    await loadBotInfo();
   }
 }
 
@@ -202,8 +279,10 @@ function renderAuth() {
     elements.userRoleBadge.className = 'user-badge';
     elements.userDisplayName.textContent = 'Not Logged In';
     elements.btnAuthAction.textContent = 'Login';
+    if (elements.serverPickerWrap) elements.serverPickerWrap.style.display = 'none';
   }
 }
+
 
 function openAuthModal() {
   elements.authModal.classList.add('active');
@@ -992,6 +1071,25 @@ function initEventListeners() {
     elements.simPresetSelect.addEventListener('change', onPresetChange);
   }
 
+  // Server Selector
+  if (elements.serverSelect) {
+    elements.serverSelect.addEventListener('change', (e) => {
+      const selectedId = e.target.value;
+      const targetGuild = state.guilds.find(g => g.id === selectedId);
+      if (targetGuild && !targetGuild.bot_installed && targetGuild.invite_url) {
+        window.open(targetGuild.invite_url, '_blank');
+        elements.serverSelect.value = state.currentGuildId;
+        showToast(`Opening invite page for ${targetGuild.name}...`, 'info');
+        return;
+      }
+      state.currentGuildId = selectedId;
+      localStorage.setItem('troop_guild_id', selectedId);
+      showToast(`Active server: ${targetGuild ? targetGuild.name : 'selected'}`, 'success');
+      loadStats();
+      loadPlayers();
+    });
+  }
+
   elements.btnRunSim.addEventListener('click', runSimulation);
   elements.btnSaveRules.addEventListener('click', saveRules);
 }
@@ -1005,3 +1103,4 @@ document.addEventListener('DOMContentLoaded', () => {
     loadPlayers();
   });
 });
+

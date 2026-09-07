@@ -65,13 +65,38 @@
             </svg>
             Rules
           </button>
+          <button class="nav-tab" data-tab="guide" id="tab-btn-guide">
+            <svg class="tab-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/>
+              <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/>
+            </svg>
+            Guide & Commands
+          </button>
         </nav>
       </div>
 
       <div class="header-right">
+        <!-- Server selector for multi-server admins -->
+        <div class="server-picker-wrap" id="server-picker-wrap" style="display: none;">
+          <svg class="server-picker-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+          </svg>
+          <select class="server-select" id="server-select" title="Active Discord Server">
+            <option value="*">All Servers</option>
+          </select>
+        </div>
+
+        <!-- Invite Bot quick button -->
+        <a href="#" class="btn-discord-invite" id="btn-header-invite" target="_blank" rel="noopener" title="Invite Bot to your server">
+          <svg width="15" height="15" viewBox="0 0 127.14 96.36" fill="currentColor">
+            <path d="M107.7 8.07A105.15 105.15 0 0 0 81.47 0a72.06 72.06 0 0 0-3.36 6.83 97.68 97.68 0 0 0-29.11 0A72.37 72.37 0 0 0 45.64 0a105.89 105.89 0 0 0-26.25 8.09C2.79 32.65-1.71 56.6.54 80.21a105.73 105.73 0 0 0 32.17 16.15 77.7 77.7 0 0 0 6.89-11.11 68.42 68.42 0 0 1-10.85-5.18c.91-.66 1.8-1.34 2.66-2a75.57 75.57 0 0 0 64.32 0c.87.71 1.76 1.39 2.66 2a68.68 68.68 0 0 1-10.87 5.19 77 77 0 0 0 6.89 11.1 105.25 105.25 0 0 0 32.19-16.14c2.64-27.38-4.51-51.11-18.9-72.15zM42.45 65.69C36.18 65.69 31 60 31 53s5-12.74 11.43-12.74S54 46 53.89 53s-5.05 12.69-11.44 12.69zm42.24 0C78.41 65.69 73.25 60 73.25 53s5-12.74 11.44-12.74S96.23 46 96.12 53s-5.04 12.69-11.43 12.69z"/>
+          </svg>
+          <span>Invite Bot</span>
+        </a>
+
         <div class="system-status">
           <span class="status-dot"></span>
-          <span class="status-text">DB Active</span>
+          <span class="status-text">Online</span>
         </div>
         <div class="user-pill" id="user-pill">
           <span class="user-badge" id="user-role-badge">Guest</span>
@@ -80,6 +105,7 @@
         </div>
       </div>
     </header>
+
 
     <!-- Main Content -->
     <main class="main-content">
@@ -630,7 +656,102 @@
           </div>
         </div>
       </section>
+
+      <!-- TAB 5: GUIDE & COMMANDS -->
+      <section class="tab-pane" id="pane-guide">
+        <div class="pane-header">
+          <div>
+            <h2 class="pane-title">Troop Command — Setup Guide &amp; Commands</h2>
+            <p class="pane-desc">Everything you need to set up the bot for your alliance, manage permissions, and run battle formations.</p>
+          </div>
+          <div class="header-actions">
+            <a href="#" class="btn btn-discord-invite" id="btn-guide-invite" target="_blank" rel="noopener">
+              <svg width="16" height="16" viewBox="0 0 127.14 96.36" fill="currentColor">
+                <path d="M107.7 8.07A105.15 105.15 0 0 0 81.47 0a72.06 72.06 0 0 0-3.36 6.83 97.68 97.68 0 0 0-29.11 0A72.37 72.37 0 0 0 45.64 0a105.89 105.89 0 0 0-26.25 8.09C2.79 32.65-1.71 56.6.54 80.21a105.73 105.73 0 0 0 32.17 16.15 77.7 77.7 0 0 0 6.89-11.11 68.42 68.42 0 0 1-10.85-5.18c.91-.66 1.8-1.34 2.66-2a75.57 75.57 0 0 0 64.32 0c.87.71 1.76 1.39 2.66 2a68.68 68.68 0 0 1-10.87 5.19 77 77 0 0 0 6.89 11.1 105.25 105.25 0 0 0 32.19-16.14c2.64-27.38-4.51-51.11-18.9-72.15zM42.45 65.69C36.18 65.69 31 60 31 53s5-12.74 11.43-12.74S54 46 53.89 53s-5.05 12.69-11.44 12.69zm42.24 0C78.41 65.69 73.25 60 73.25 53s5-12.74 11.44-12.74S96.23 46 96.12 53s-5.04 12.69-11.43 12.69z"/>
+              </svg>
+              <span>Invite Bot to Discord</span>
+            </a>
+          </div>
+        </div>
+
+        <div class="guide-grid">
+          <!-- 1. Quick Setup Card -->
+          <div class="glass-card guide-card">
+            <div class="guide-step-badge">STEP 1</div>
+            <h3 class="card-title mt-8 mb-8">1. Invite &amp; Grant Roles</h3>
+            <p class="text-muted text-sm mb-12">Click the <strong>Invite Bot</strong> button above to add Troop Command to your Discord server. Then create or assign two roles to your leadership:</p>
+            <ul class="guide-list">
+              <li><strong class="text-cyan">Troop Admin</strong>: Grants full management (edit players, import CSVs, change rules). Anyone with Discord <code>Administrator</code> or <code>Manage Server</code> automatically qualifies.</li>
+              <li><strong class="text-purple">Troop Calculator</strong>: Allows alliance leaders (R4/R5) to trigger <code>/calculate</code> formations.</li>
+            </ul>
+          </div>
+
+          <!-- 2. Player Registration Card -->
+          <div class="glass-card guide-card">
+            <div class="guide-step-badge">STEP 2</div>
+            <h3 class="card-title mt-8 mb-8">2. Player Registration</h3>
+            <p class="text-muted text-sm mb-12">Members register their troop and hero progression in Discord:</p>
+            <div class="code-pill">/register</div>
+            <p class="text-muted text-sm mt-8">Opens an interactive modal to enter In-Game Name, March Limit, FC levels (Infantry, Lancers, Marksman), and Helios counts.</p>
+            <div class="code-pill mt-8">/update</div>
+            <p class="text-muted text-sm mt-8">Used whenever an account upgrades (e.g. unlocking new FC tier, obtaining more Helios, or leveling heroes).</p>
+          </div>
+
+          <!-- 3. Battle Formations Card -->
+          <div class="glass-card guide-card">
+            <div class="guide-step-badge">STEP 3</div>
+            <h3 class="card-title mt-8 mb-8">3. Optimize Battle Formations</h3>
+            <p class="text-muted text-sm mb-12">When planning a Rally or Garrison:</p>
+            <div class="code-pill">/calculate</div>
+            <p class="text-muted text-sm mt-8">Prompts for Attack/Defence, Rally/Garrison, troop ratios, and total capacity. Calculates the optimal troop composition and identifies the <strong>Top 4 Joiners</strong> to maximize active skills.</p>
+          </div>
+        </div>
+
+        <!-- Commands Reference Table -->
+        <div class="glass-card mt-24">
+          <h3 class="card-title mb-16">Discord Slash Commands Reference</h3>
+          <div class="table-responsive">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th style="width: 180px;">Command</th>
+                  <th style="width: 150px;">Permissions</th>
+                  <th>Description</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td><code class="cmd-badge">/register</code></td>
+                  <td><span class="badge-role member">All Members</span></td>
+                  <td>Guided 2-step modal to register your In-Game Name, March Limit, and Troop stats.</td>
+                </tr>
+                <tr>
+                  <td><code class="cmd-badge">/update</code></td>
+                  <td><span class="badge-role member">All Members</span></td>
+                  <td>Update your existing registered stats, FC levels, Helios counts, or hero progression.</td>
+                </tr>
+                <tr>
+                  <td><code class="cmd-badge">/profile</code></td>
+                  <td><span class="badge-role member">All Members</span></td>
+                  <td>Display your personal registered troop card and hero levels.</td>
+                </tr>
+                <tr>
+                  <td><code class="cmd-badge">/calculate</code></td>
+                  <td><span class="badge-role calc">Troop Calculator</span></td>
+                  <td>Calculate an optimized Rally or Garrison formation with troop allocation breakdown and Top 4 Joiners.</td>
+                </tr>
+                <tr>
+                  <td><code class="cmd-badge">/rules</code></td>
+                  <td><span class="badge-role admin">Troop Admin</span></td>
+                  <td>View current optimizer weights (Helios multiplier, FC level priority order).</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </section>
     </main>
+
   </div>
 
   <!-- MODAL: ADD / EDIT PLAYER -->
@@ -796,27 +917,30 @@
         <button class="modal-close" id="auth-modal-close">&times;</button>
       </div>
       <div class="modal-body">
-        <form id="auth-passkey-form">
-          <div class="form-group">
-            <label class="form-label" for="auth-passkey-input">Admin Master Passkey</label>
-            <input type="password" class="form-input" id="auth-passkey-input" placeholder="Enter ADMIN_PANEL_KEY" required>
-            <span class="form-help">Default passkey is <code>admin123</code> (configured in .env).</span>
-          </div>
-          <button type="submit" class="btn btn-primary btn-block">Log In with Passkey</button>
-        </form>
-
-        <div class="auth-divider" id="auth-oauth-divider">
-          <span>OR</span>
-        </div>
-
-        <div id="auth-oauth-wrap">
+        <div id="auth-oauth-wrap" class="mb-16">
+          <p class="text-sm text-muted mb-12">Server Administrators: Sign in with Discord to access and manage your alliance's roster.</p>
           <a href="/api/auth/discord/login" class="btn btn-discord btn-block">
-            <svg width="18" height="18" viewBox="0 0 127.14 96.36" fill="currentColor">
+            <svg width="20" height="20" viewBox="0 0 127.14 96.36" fill="currentColor">
               <path d="M107.7 8.07A105.15 105.15 0 0 0 81.47 0a72.06 72.06 0 0 0-3.36 6.83 97.68 97.68 0 0 0-29.11 0A72.37 72.37 0 0 0 45.64 0a105.89 105.89 0 0 0-26.25 8.09C2.79 32.65-1.71 56.6.54 80.21a105.73 105.73 0 0 0 32.17 16.15 77.7 77.7 0 0 0 6.89-11.11 68.42 68.42 0 0 1-10.85-5.18c.91-.66 1.8-1.34 2.66-2a75.57 75.57 0 0 0 64.32 0c.87.71 1.76 1.39 2.66 2a68.68 68.68 0 0 1-10.87 5.19 77 77 0 0 0 6.89 11.1 105.25 105.25 0 0 0 32.19-16.14c2.64-27.38-4.51-51.11-18.9-72.15zM42.45 65.69C36.18 65.69 31 60 31 53s5-12.74 11.43-12.74S54 46 53.89 53s-5.05 12.69-11.44 12.69zm42.24 0C78.41 65.69 73.25 60 73.25 53s5-12.74 11.44-12.74S96.23 46 96.12 53s-5.04 12.69-11.43 12.69z"/>
             </svg>
             Log In with Discord
           </a>
         </div>
+
+        <div class="auth-divider" id="auth-oauth-divider">
+          <span>OR BOT OWNER</span>
+        </div>
+
+        <form id="auth-passkey-form" class="mt-16">
+          <div class="form-group">
+            <label class="form-label" for="auth-passkey-input">Master Passkey</label>
+            <input type="password" class="form-input" id="auth-passkey-input" placeholder="Enter ADMIN_PANEL_KEY" required>
+            <span class="form-help">For host / bot owner access (configured in .env).</span>
+          </div>
+          <button type="submit" class="btn btn-secondary btn-block">Log In with Passkey</button>
+        </form>
+      </div>
+
       </div>
     </div>
   </div>

@@ -67,6 +67,7 @@ class FormationService:
         ratio: dict[TroopType, float],
         capacity: int,
         target_joiners: Optional[list[str]] = None,
+        guild_id: Optional[str] = None,
     ) -> FormationResult:
         request = FormationRequest(
             mode=mode,
@@ -75,11 +76,12 @@ class FormationService:
             capacity=capacity,
             target_joiners=tuple(target_joiners or ()),
         )
-        all_players = self.repository.list_all()
+        all_players = self.repository.list_all(guild_id=guild_id)
         candidates = [
             p for p in (_to_optimizer_player(pl) for pl in all_players) if p is not None
         ]
         return optimize(candidates, request, self.config)
+
 
 
 def format_result(result: FormationResult) -> str:

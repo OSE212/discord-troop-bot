@@ -9,11 +9,13 @@ from bot.rules.configuration import RankingConfig
 from bot.settings import Settings
 from bot.web.api import (
     handle_auth_me,
+    handle_bot_info,
     handle_calculate,
     handle_create_player,
     handle_delete_player,
     handle_discord_callback,
     handle_discord_login,
+    handle_get_guilds,
     handle_get_player,
     handle_get_presets,
     handle_get_rules,
@@ -35,13 +37,22 @@ async def handle_index(request: web.Request) -> web.FileResponse:
     return web.FileResponse(index_path)
 
 
-def create_web_app(db: Database, config: RankingConfig, settings: Settings) -> web.Application:
+def create_web_app(
+    db: Database,
+    config: RankingConfig,
+    settings: Settings,
+    bot: Optional[Any] = None,
+) -> web.Application:
     app = web.Application()
     app["db"] = db
     app["config"] = config
     app["settings"] = settings
+    app["bot"] = bot
 
     # --- API Routes ---
+    app.router.add_get("/api/bot/info", handle_bot_info)
+    app.router.add_get("/api/guilds", handle_get_guilds)
+
     app.router.add_get("/api/auth/me", handle_auth_me)
     app.router.add_post("/api/auth/login", handle_login_passkey)
     app.router.add_post("/api/auth/logout", handle_logout)
@@ -62,6 +73,7 @@ def create_web_app(db: Database, config: RankingConfig, settings: Settings) -> w
 
     app.router.add_get("/api/rules", handle_get_rules)
     app.router.add_put("/api/rules", handle_update_rules)
+
 
     # --- Frontend SPA & Static Routes ---
     app.router.add_get("/", handle_index)

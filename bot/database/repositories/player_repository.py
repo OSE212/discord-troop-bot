@@ -21,20 +21,32 @@ class PlayerRepository:
 
     # -- lookups ----------------------------------------------------
 
-    def get_by_discord_id(self, discord_user_id: str) -> Optional[Player]:
+    def get_by_discord_id(
+        self, discord_user_id: str, guild_id: Optional[str] = None
+    ) -> Optional[Player]:
         stmt = select(Player).where(Player.discord_user_id == str(discord_user_id))
-        return self.session.execute(stmt).scalar_one_or_none()
+        if guild_id and guild_id != "*":
+            stmt = stmt.where((Player.guild_id == str(guild_id)) | (Player.guild_id.is_(None)))
+        return self.session.execute(stmt).scalars().first()
 
-    def get_by_game_player_id(self, game_player_id: str) -> Optional[Player]:
+    def get_by_game_player_id(self, game_player_id: str, guild_id: Optional[str] = None) -> Optional[Player]:
         stmt = select(Player).where(Player.game_player_id == str(game_player_id))
-        return self.session.execute(stmt).scalar_one_or_none()
+        if guild_id and guild_id != "*":
+            stmt = stmt.where((Player.guild_id == str(guild_id)) | (Player.guild_id.is_(None)))
+        return self.session.execute(stmt).scalars().first()
 
     def get_by_id(self, player_id: int) -> Optional[Player]:
         return self.session.get(Player, player_id)
 
-    def list_all(self) -> list[Player]:
+    def list_all(self, guild_id: Optional[str] = None) -> list[Player]:
         stmt = select(Player).order_by(Player.name)
+        if guild_id and guild_id != "*":
+            stmt = stmt.where((Player.guild_id == str(guild_id)) | (Player.guild_id.is_(None)))
         return list(self.session.execute(stmt).scalars().all())
+
+    def list_distinct_guild_ids(self) -> list[str]:
+        stmt = select(Player.guild_id).where(Player.guild_id.isnot(None)).distinct()
+        return [str(g) for g in self.session.execute(stmt).scalars().all() if g]
 
     # -- writes -------------------------------------------------------
 
@@ -47,19 +59,17 @@ class PlayerRepository:
         march_limit: int,
         troop_data: dict[TroopType, dict],
         heroes_data: Optional[dict[str, dict]] = None,
+        guild_id: Optional[str] = None,
     ) -> Player:
-        """Create a brand new player with all three troop profiles and optional heroes.
-
-        `troop_data` maps each TroopType to a dict with keys
-        `helios` (bool), `level` (int), and `helios_quantity`
-        (int | None, required when helios=True).
-        """
+        """Create a brand new player with all three troop profiles and optional heroes."""
         player = Player(
+            guild_id=str(guild_id) if guild_id else None,
             discord_user_id=str(discord_user_id),
             game_player_id=game_player_id,
             name=name,
             march_limit=march_limit,
         )
+
         for troop_type in TroopType:
             data = troop_data[troop_type]
             player.troop_profiles.append(

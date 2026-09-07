@@ -42,7 +42,8 @@ class TroopBot(commands.Bot):
 
         if os.getenv("ENABLE_WEB_PANEL", "true").lower() in ("1", "true", "yes"):
             try:
-                app = create_web_app(self.db, self.config, self.settings)
+                app = create_web_app(self.db, self.config, self.settings, bot=self)
+
                 self.web_runner = web.AppRunner(app)
                 await self.web_runner.setup()
                 self.web_site = web.TCPSite(

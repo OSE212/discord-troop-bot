@@ -39,6 +39,16 @@ class Database:
 
     def create_all(self) -> None:
         Base.metadata.create_all(bind=self.engine)
+        # Safe automatic column migration for existing databases
+        try:
+            from sqlalchemy import text
+            with self.engine.connect() as conn:
+                conn.execute(text("ALTER TABLE players ADD COLUMN guild_id VARCHAR(32)"))
+                conn.commit()
+        except Exception:
+            # Column already exists or table freshly created with it
+            pass
+
 
     @contextmanager
     def session(self) -> Iterator[Session]:

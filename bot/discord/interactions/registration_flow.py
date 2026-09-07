@@ -223,11 +223,13 @@ async def _finalize_registration(
     interaction: discord.Interaction, db: Database, draft: RegistrationDraft, on_done
 ):
     try:
+        draft.guild_id = str(interaction.guild_id) if interaction.guild_id else None
         with db.session() as session:
             repository = PlayerRepository(session)
             service = PlayerService(repository)
             player = service.register_player(draft)
             summary = _summarize(player)
+
     except ValidationError as exc:
         await interaction.response.send_message(str(exc), ephemeral=True)
         return

@@ -76,7 +76,7 @@ Open **PowerShell** or **Terminal** on your computer:
 
 ```bash
 # Replace with the path to the .key file you downloaded, and your Oracle VM Public IP
-ssh -i "C:\path\to\your-oracle-key.key" ubuntu@<YOUR_PUBLIC_IP>
+ssh -i "D:\F2Projects\ssh-key-2026-09-07.key" ubuntu@51.170.133.36
 ```
 
 *(If you get a file permissions warning on the key in Windows, move the key into `C:\Users\<YourUser>\.ssh\` and try again).*
@@ -147,7 +147,7 @@ That's it! Your bot is online on Discord, and your web panel is live.
 
 Open your browser and navigate to:
 ```
-http://<YOUR_PUBLIC_IP>
+http://51.170.133.36
 ```
 *(e.g. `http://129.152.34.82`)*
 

@@ -42,12 +42,16 @@ class Player(Base):
     __tablename__ = "players"
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    guild_id: Mapped[Optional[str]] = mapped_column(
+        String(32), nullable=True, index=True
+    )
     discord_user_id: Mapped[str] = mapped_column(
         String(32), unique=True, nullable=False, index=True
     )
     game_player_id: Mapped[str] = mapped_column(String(64), nullable=False)
     name: Mapped[str] = mapped_column(String(128), nullable=False)
     march_limit: Mapped[int] = mapped_column(Integer, nullable=False)
+
 
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), default=_utcnow, nullable=False

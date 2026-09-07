@@ -35,9 +35,11 @@ class RegistrationDraft:
     game_player_id: Optional[str] = None
     name: Optional[str] = None
     march_limit: Optional[int] = None
+    guild_id: Optional[str] = None
     troop_types: dict[TroopType, TroopTypeInput] = field(
         default_factory=lambda: {t: TroopTypeInput(helios=False) for t in TroopType}
     )
+
 
     def is_ready(self) -> bool:
         if not self.game_player_id or not self.name or not self.march_limit:
@@ -110,7 +112,9 @@ class PlayerService:
             name=draft.name,
             march_limit=draft.march_limit,
             troop_data=troop_data,
+            guild_id=draft.guild_id,
         )
+
 
     # -- updates ---------------------------------------------------------
 

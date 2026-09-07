@@ -275,8 +275,9 @@ class CsvImporter:
                     break
         return column_map
 
-    def import_text(self, text: str) -> ImportResult:
+    def import_text(self, text: str, guild_id: Optional[str] = None) -> ImportResult:
         result = ImportResult()
+
 
         # Remove BOM if present
         if text.startswith("\ufeff"):
@@ -394,10 +395,10 @@ class CsvImporter:
             # Upsert into database
             try:
                 # 1. Match by game_player_id
-                player = self.repo.get_by_game_player_id(game_id)
+                player = self.repo.get_by_game_player_id(game_id, guild_id=guild_id)
                 # 2. If not found and discord_id is standard, check discord_user_id
                 if player is None and not discord_id.startswith("manual_"):
-                    player = self.repo.get_by_discord_id(discord_id)
+                    player = self.repo.get_by_discord_id(discord_id, guild_id=guild_id)
 
                 if player is not None:
                     # Update player
@@ -437,8 +438,10 @@ class CsvImporter:
                         march_limit=march_limit,
                         troop_data=troop_configs,
                         heroes_data=heroes_data,
+                        guild_id=guild_id,
                     )
                     result.created += 1
+
 
             except Exception as exc:
                 result.skipped += 1
