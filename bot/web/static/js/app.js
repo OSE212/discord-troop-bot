@@ -856,7 +856,7 @@ async function loadHeroes() {
   }
 }
 
-function populateHeroSlotDropdowns() {
+function populateHeroSlotDropdowns(maxGen) {
   const slotSelects = [
     elements.simHeroSlot1,
     elements.simHeroSlot2,
@@ -866,14 +866,22 @@ function populateHeroSlotDropdowns() {
 
   if (!slotSelects[0]) return;
 
+  // Determine numeric cap. 'Extreme' / null / undefined => show all (99)
+  const genCap = (maxGen === null || maxGen === undefined)
+    ? 99
+    : (isNaN(Number(maxGen)) ? 99 : Number(maxGen));
+
   const groups = {
-    attack: { label: '⚔️ Attack Buffers', items: [] },
-    defence: { label: '🛡️ Defense Buffers', items: [] },
-    caller: { label: '👑 Callers & Utilities', items: [] },
-    custom: { label: '⭐ Roster Heroes', items: [] },
+    attack:  { label: '⚔️ Attack Buffers',       items: [] },
+    defence: { label: '🛡️ Defense Buffers',      items: [] },
+    caller:  { label: '👑 Callers & Utilities',  items: [] },
+    custom:  { label: '⭐ Roster Heroes',         items: [] },
   };
 
   state.heroCatalog.forEach(h => {
+    // Filter by generation if gen_introduced is set
+    const heroGen = h.gen_introduced !== undefined ? Number(h.gen_introduced) : 1;
+    if (heroGen > genCap) return; // skip heroes above this generation
     const r = h.role || 'custom';
     if (groups[r]) {
       groups[r].items.push(h);
@@ -884,6 +892,7 @@ function populateHeroSlotDropdowns() {
 
   slotSelects.forEach((sel, slotIdx) => {
     if (!sel) return;
+    const currentVal = sel.value; // remember current selection
     sel.innerHTML = '';
     Object.values(groups).forEach(grp => {
       if (grp.items.length === 0) return;
@@ -899,9 +908,12 @@ function populateHeroSlotDropdowns() {
       sel.appendChild(optGroup);
     });
 
-    // Set initial value from state
-    const currentHero = state.sim.heroes[slotIdx] || 'Jessie';
-    sel.value = currentHero;
+    // Restore selection if still available, else pick first
+    const heroToSet = state.sim.heroes[slotIdx] || currentVal || 'Jessie';
+    sel.value = heroToSet;
+    if (!sel.value && sel.options.length > 0) {
+      sel.selectedIndex = 0;
+    }
   });
 
   updateHeroBuffLabels();
@@ -1008,8 +1020,13 @@ function onGenChange() {
 
   if (!gen) {
     presetSel.disabled = true;
+    // No gen selected → show all heroes
+    populateHeroSlotDropdowns();
     return;
   }
+
+  // Filter hero dropdowns to only show heroes available in this generation
+  populateHeroSlotDropdowns(gen);
 
   const matches = state.presets.filter(p => String(p.generation) === gen);
   matches.forEach((p, i) => {
