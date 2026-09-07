@@ -79,20 +79,37 @@ def parse_number(val: Any) -> Optional[int]:
 
 
 def parse_level(val: Any) -> Optional[int]:
-    """Extract numeric FC / troop level from strings like 'FC 5', 'fc3', 'Level 8', 'T10', '5'."""
+    """Extract numeric FC / troop level.
+    Levels 1-30 are F1-F30 (Level 1 to Level 30).
+    FC1-FC10 map to 31-40.
+    Supports strings like 'FC 5', 'fc3', 'Level 28', 'F28', 'T10', '28'.
+    """
     if val is None:
         return None
     s = str(val).strip()
     if not s or s == "-":
         return None
 
-    match = re.search(r"(?:fc|level|lvl|tier|t)?\s*(\d+)", s, re.IGNORECASE)
+    # Check for explicit FC prefix first e.g. "FC 5", "fc3", "Fire Crystal 2"
+    fc_match = re.search(r"(?:fc|fire\s*crystal)\s*(\d+)", s, re.IGNORECASE)
+    if fc_match:
+        try:
+            fc_num = int(fc_match.group(1))
+            return 30 + fc_num
+        except ValueError:
+            return None
+
+    # Standard level / F prefix / plain number
+    match = re.search(r"(?:level|lvl|tier|t|f)?\s*(\d+)", s, re.IGNORECASE)
     if match:
         try:
-            return int(match.group(1))
+            num = int(match.group(1))
+            # If someone wrote FC as plain number like 31-40, keep as is
+            return num
         except ValueError:
             return None
     return None
+
 
 
 def parse_helios(val: Any) -> tuple[bool, Optional[int]]:

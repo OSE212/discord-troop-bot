@@ -179,6 +179,16 @@ function formatNumber(num) {
   return Number(num).toLocaleString();
 }
 
+function formatFcLevel(lvl) {
+  if (lvl === null || lvl === undefined) return '';
+  const num = Number(lvl);
+  if (num >= 31) {
+    return `FC${num - 30}`;
+  }
+  return `F${num}`;
+}
+
+
 function showToast(message, type = 'info') {
   const toast = document.createElement('div');
   toast.className = `toast ${type}`;
@@ -465,13 +475,14 @@ function renderStats() {
   elements.statTotalHelios.textContent = formatNumber(totalHelios);
 
   const avgFcOverall = ((s.average_levels.infantry + s.average_levels.lancers + s.average_levels.marksman) / 3).toFixed(1);
-  elements.statAvgFc.textContent = `FC ${avgFcOverall}`;
-  elements.statFcBreakdown.textContent = `Inf: FC${s.average_levels.infantry} | Lan: FC${s.average_levels.lancers} | Mrk: FC${s.average_levels.marksman}`;
+  elements.statAvgFc.textContent = `${formatFcLevel(avgFcOverall)}`;
+  elements.statFcBreakdown.textContent = `Inf: ${formatFcLevel(s.average_levels.infantry)} | Lan: ${formatFcLevel(s.average_levels.lancers)} | Mrk: ${formatFcLevel(s.average_levels.marksman)}`;
 
   // Breakdown bars
-  elements.barInfStat.textContent = `${formatNumber(s.helios_quantities.infantry)} Helios | Avg FC ${s.average_levels.infantry}`;
-  elements.barLanStat.textContent = `${formatNumber(s.helios_quantities.lancers)} Helios | Avg FC ${s.average_levels.lancers}`;
-  elements.barMrkStat.textContent = `${formatNumber(s.helios_quantities.marksman)} Helios | Avg FC ${s.average_levels.marksman}`;
+  elements.barInfStat.textContent = `${formatNumber(s.helios_quantities.infantry)} Helios | Avg ${formatFcLevel(s.average_levels.infantry)}`;
+  elements.barLanStat.textContent = `${formatNumber(s.helios_quantities.lancers)} Helios | Avg ${formatFcLevel(s.average_levels.lancers)}`;
+  elements.barMrkStat.textContent = `${formatNumber(s.helios_quantities.marksman)} Helios | Avg ${formatFcLevel(s.average_levels.marksman)}`;
+
 
   const maxVal = Math.max(1, s.helios_quantities.infantry, s.helios_quantities.lancers, s.helios_quantities.marksman);
   elements.barInfFill.style.width = `${Math.max(15, (s.helios_quantities.infantry / maxVal) * 100)}%`;
@@ -511,11 +522,11 @@ async function loadPlayers() {
     const players = await fetchApi(`/api/players?q=${q}&filter=${filter}&alliance_tag=${tag}`);
     state.players = players;
     renderRoster();
-    loadAllianceTags();
   } catch (err) {
     elements.rosterTableBody.innerHTML = `<tr><td colspan="8" class="empty-cell text-danger">Failed to load players: ${err.message}</td></tr>`;
   }
 }
+
 
 function renderRoster() {
   const tbody = elements.rosterTableBody;
@@ -533,8 +544,9 @@ function renderRoster() {
       if (t.level === null) return '<span class="text-muted">-</span>';
       const isHelios = t.helios;
       const qtyStr = isHelios && t.helios_quantity !== null ? ` (${formatNumber(t.helios_quantity)})` : '';
-      return `<span class="pill-level ${isHelios ? 'helios' : ''}">${isHelios ? '🔥 ' : ''}FC${t.level}${qtyStr}</span>`;
+      return `<span class="pill-level ${isHelios ? 'helios' : ''}">${isHelios ? '🔥 ' : ''}${formatFcLevel(t.level)}${qtyStr}</span>`;
     };
+
 
     const statusBadge = p.is_complete
       ? '<span class="status-badge complete">Complete</span>'
@@ -1515,6 +1527,8 @@ document.addEventListener('DOMContentLoaded', () => {
   checkAuth().then(() => {
     loadStats();
     loadPlayers();
+    loadAllianceTags();
   });
 });
+
 
