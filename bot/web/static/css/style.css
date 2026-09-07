@@ -1823,9 +1823,11 @@ body {
    ============================================================ */
 .sim-heroes-grid {
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
+  grid-template-columns: repeat(auto-fit, minmax(min(160px, 100%), 1fr));
   gap: 10px;
   margin-top: 10px;
+  width: 100%;
+  box-sizing: border-box;
 }
 
 .sim-hero-slot {
@@ -1837,6 +1839,8 @@ body {
   flex-direction: column;
   gap: 6px;
   transition: var(--transition);
+  min-width: 0;
+  box-sizing: border-box;
 }
 
 .sim-hero-slot:hover,
@@ -2630,7 +2634,7 @@ body {
 
   /* ---- HERO SLOTS (Tablet) ---- */
   .sim-heroes-grid {
-    grid-template-columns: repeat(2, 1fr);
+    grid-template-columns: repeat(auto-fit, minmax(min(140px, 100%), 1fr));
   }
 }
 
@@ -2669,6 +2673,10 @@ body {
   }
 
   .sim-heroes-grid {
-    grid-template-columns: 1fr;
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .sim-hero-slot {
+    padding: 8px 10px;
   }
 }
