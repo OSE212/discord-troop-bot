@@ -19,6 +19,7 @@ const state = {
     lan: 20,
     mrk: 30,
     capacity: 1500000,
+    heroes: ['Jessie', 'Jasser', 'Seoyoon', 'Norah'],
     result: null,
   },
   editingPlayerId: null,
@@ -27,6 +28,8 @@ const state = {
   formHeroes: [],   // [{name, stars, skill_level}]
   // Formation presets (loaded once)
   presets: [],
+  heroCatalog: [],
+  heroPresets: [],
 };
 
 // DOM Elements
@@ -137,6 +140,17 @@ const elements = {
   simPresetNotes: document.getElementById('sim-preset-notes'),
   simJoinersCard: document.getElementById('sim-joiners-card'),
   simJoinersList: document.getElementById('sim-joiners-list'),
+  // Target Hero Slots (Simulator)
+  simHeroSlot1: document.getElementById('sim-hero-slot-1'),
+  simHeroSlot2: document.getElementById('sim-hero-slot-2'),
+  simHeroSlot3: document.getElementById('sim-hero-slot-3'),
+  simHeroSlot4: document.getElementById('sim-hero-slot-4'),
+  simHeroBuff1: document.getElementById('sim-hero-buff-1'),
+  simHeroBuff2: document.getElementById('sim-hero-buff-2'),
+  simHeroBuff3: document.getElementById('sim-hero-buff-3'),
+  simHeroBuff4: document.getElementById('sim-hero-buff-4'),
+  btnHeroPresets: document.querySelectorAll('.btn-hero-preset'),
+  btnHeroReset: document.getElementById('btn-hero-reset'),
   // Rules
   ruleAttackOrder: document.getElementById('rule-attack-order'),
   ruleDefenceOrder: document.getElementById('rule-defence-order'),
@@ -693,6 +707,7 @@ async function runSimulation() {
         lancers: state.sim.lan,
         marksman: state.sim.mrk,
       },
+      target_joiners: getSelectedHeroJoiners(),
     };
 
     const result = await fetchApi('/api/calculate', {
@@ -826,6 +841,136 @@ async function loadRules() {
   }
 }
 
+// ============================================================
+// Target Hero Slots & Presets (Simulator)
+// ============================================================
+
+async function loadHeroes() {
+  try {
+    const res = await fetch('/api/heroes').then(r => r.json());
+    state.heroCatalog = res.heroes || [];
+    state.heroPresets = res.presets || [];
+    populateHeroSlotDropdowns();
+  } catch (err) {
+    console.error('Failed to load heroes:', err);
+  }
+}
+
+function populateHeroSlotDropdowns() {
+  const slotSelects = [
+    elements.simHeroSlot1,
+    elements.simHeroSlot2,
+    elements.simHeroSlot3,
+    elements.simHeroSlot4,
+  ];
+
+  if (!slotSelects[0]) return;
+
+  const groups = {
+    attack: { label: '⚔️ Attack Buffers', items: [] },
+    defence: { label: '🛡️ Defense Buffers', items: [] },
+    caller: { label: '👑 Callers & Utilities', items: [] },
+    custom: { label: '⭐ Roster Heroes', items: [] },
+  };
+
+  state.heroCatalog.forEach(h => {
+    const r = h.role || 'custom';
+    if (groups[r]) {
+      groups[r].items.push(h);
+    } else {
+      groups.custom.items.push(h);
+    }
+  });
+
+  slotSelects.forEach((sel, slotIdx) => {
+    if (!sel) return;
+    sel.innerHTML = '';
+    Object.values(groups).forEach(grp => {
+      if (grp.items.length === 0) return;
+      const optGroup = document.createElement('optgroup');
+      optGroup.label = grp.label;
+      grp.items.forEach(h => {
+        const opt = document.createElement('option');
+        opt.value = h.name;
+        opt.textContent = `${h.name} (${h.buff})`;
+        opt.dataset.buff = h.buff;
+        optGroup.appendChild(opt);
+      });
+      sel.appendChild(optGroup);
+    });
+
+    // Set initial value from state
+    const currentHero = state.sim.heroes[slotIdx] || 'Jessie';
+    sel.value = currentHero;
+  });
+
+  updateHeroBuffLabels();
+}
+
+function updateHeroBuffLabels() {
+  const slotSelects = [
+    elements.simHeroSlot1,
+    elements.simHeroSlot2,
+    elements.simHeroSlot3,
+    elements.simHeroSlot4,
+  ];
+  const buffLabels = [
+    elements.simHeroBuff1,
+    elements.simHeroBuff2,
+    elements.simHeroBuff3,
+    elements.simHeroBuff4,
+  ];
+
+  slotSelects.forEach((sel, i) => {
+    if (!sel || !buffLabels[i]) return;
+    const heroName = sel.value;
+    state.sim.heroes[i] = heroName;
+    const heroObj = state.heroCatalog.find(h => h.name.toLowerCase() === heroName.toLowerCase());
+    const buff = heroObj ? heroObj.buff : 'Expedition Skill Buff';
+    buffLabels[i].textContent = buff;
+  });
+}
+
+function setHeroJoinerSlots(heroesList) {
+  if (!Array.isArray(heroesList)) return;
+  const slotSelects = [
+    elements.simHeroSlot1,
+    elements.simHeroSlot2,
+    elements.simHeroSlot3,
+    elements.simHeroSlot4,
+  ];
+  heroesList.slice(0, 4).forEach((hName, i) => {
+    if (slotSelects[i]) {
+      let found = false;
+      for (const opt of slotSelects[i].options) {
+        if (opt.value.toLowerCase() === hName.toLowerCase()) {
+          slotSelects[i].value = opt.value;
+          found = true;
+          break;
+        }
+      }
+      if (!found) {
+        const newOpt = document.createElement('option');
+        newOpt.value = hName;
+        newOpt.textContent = hName;
+        slotSelects[i].appendChild(newOpt);
+        slotSelects[i].value = hName;
+      }
+    }
+  });
+  updateHeroBuffLabels();
+}
+
+function getSelectedHeroJoiners() {
+  const slotSelects = [
+    elements.simHeroSlot1,
+    elements.simHeroSlot2,
+    elements.simHeroSlot3,
+    elements.simHeroSlot4,
+  ];
+  return slotSelects.map((s, i) => (s && s.value) ? s.value : (state.sim.heroes[i] || 'Jessie'));
+}
+
 // Formation Presets
 async function loadPresets() {
   try {
@@ -899,6 +1044,14 @@ function applyPreset(preset) {
   syncRatio('inf', preset.ratio.infantry);
   syncRatio('lan', preset.ratio.lancers);
   syncRatio('mrk', preset.ratio.marksman);
+
+  // Auto-fill hero slots from generation preset
+  if (Array.isArray(preset.joiners) && preset.joiners.length >= 4) {
+    setHeroJoinerSlots(preset.joiners.slice(0, 4));
+    if (elements.btnHeroPresets) {
+      elements.btnHeroPresets.forEach(b => b.classList.remove('active'));
+    }
+  }
 
   // Show guide card
   const guide = elements.simPresetGuide;
@@ -1180,6 +1333,21 @@ function initEventListeners() {
       elements.simModeBtns.forEach(b => b.classList.remove('active'));
       btn.classList.add('active');
       state.sim.mode = btn.dataset.value;
+
+      // When mode changes, auto-switch to corresponding preset if user was on standard default
+      if (state.sim.mode === 'attack') {
+        const activePreset = document.querySelector('.btn-hero-preset.active');
+        if (!activePreset || activePreset.dataset.preset === 'fortress_defense') {
+          const atkBtn = document.querySelector('.btn-hero-preset[data-preset="attack_all_out"]');
+          if (atkBtn) atkBtn.click();
+        }
+      } else if (state.sim.mode === 'defence') {
+        const activePreset = document.querySelector('.btn-hero-preset.active');
+        if (!activePreset || activePreset.dataset.preset === 'attack_all_out') {
+          const defBtn = document.querySelector('.btn-hero-preset[data-preset="fortress_defense"]');
+          if (defBtn) defBtn.click();
+        }
+      }
     });
   });
 
@@ -1190,6 +1358,56 @@ function initEventListeners() {
       state.sim.formation_type = btn.dataset.value;
     });
   });
+
+  // Hero Slot Select Change Listeners
+  [elements.simHeroSlot1, elements.simHeroSlot2, elements.simHeroSlot3, elements.simHeroSlot4].forEach((sel) => {
+    if (sel) {
+      sel.addEventListener('change', () => {
+        updateHeroBuffLabels();
+        // Remove active class from preset buttons since user manually changed a slot
+        elements.btnHeroPresets.forEach(b => b.classList.remove('active'));
+      });
+    }
+  });
+
+  // Hero Preset Buttons
+  elements.btnHeroPresets.forEach(btn => {
+    btn.addEventListener('click', () => {
+      elements.btnHeroPresets.forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      const presetId = btn.dataset.preset;
+      const preset = state.heroPresets.find(p => p.id === presetId);
+      if (preset && preset.heroes) {
+        setHeroJoinerSlots(preset.heroes);
+      } else if (presetId === 'attack_all_out') {
+        setHeroJoinerSlots(['Jessie', 'Jasser', 'Seoyoon', 'Norah']);
+      } else if (presetId === 'fortress_defense') {
+        setHeroJoinerSlots(['Patrick', 'Sergey', 'Ling Xue', 'Ahmose']);
+      } else if (presetId === 'mixed_svs') {
+        setHeroJoinerSlots(['Jessie', 'Seoyoon', 'Patrick', 'Sergey']);
+      } else if (presetId === 'double_damage') {
+        setHeroJoinerSlots(['Jessie', 'Jasser', 'Jessie', 'Seoyoon']);
+      } else if (presetId === 'double_hp') {
+        setHeroJoinerSlots(['Patrick', 'Sergey', 'Ling Xue', 'Patrick']);
+      }
+    });
+  });
+
+  // Hero Reset Button
+  if (elements.btnHeroReset) {
+    elements.btnHeroReset.addEventListener('click', () => {
+      elements.btnHeroPresets.forEach(b => b.classList.remove('active'));
+      if (state.sim.mode === 'attack') {
+        const atkBtn = document.querySelector('.btn-hero-preset[data-preset="attack_all_out"]');
+        if (atkBtn) atkBtn.classList.add('active');
+        setHeroJoinerSlots(['Jessie', 'Jasser', 'Seoyoon', 'Norah']);
+      } else {
+        const defBtn = document.querySelector('.btn-hero-preset[data-preset="fortress_defense"]');
+        if (defBtn) defBtn.classList.add('active');
+        setHeroJoinerSlots(['Patrick', 'Sergey', 'Ling Xue', 'Ahmose']);
+      }
+    });
+  }
 
   // Generation preset dropdowns
   if (elements.simGenSelect) {
@@ -1226,6 +1444,7 @@ function initEventListeners() {
 document.addEventListener('DOMContentLoaded', () => {
   initEventListeners();
   loadPresets();
+  loadHeroes();
   checkAuth().then(() => {
     loadStats();
     loadPlayers();

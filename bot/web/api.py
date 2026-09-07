@@ -867,6 +867,11 @@ async def handle_calculate(request: web.Request) -> web.Response:
     except (TypeError, ValueError):
         return web.json_response({"error": "Ratio percentages must be numbers"}, status=400)
 
+    raw_joiners = data.get("target_joiners") or data.get("joiners")
+    target_joiners: Optional[list[str]] = None
+    if isinstance(raw_joiners, list):
+        target_joiners = [str(h).strip() for h in raw_joiners if str(h).strip()]
+
     db = request.app["db"]
     config: RankingConfig = request.app["config"]
 
@@ -879,6 +884,7 @@ async def handle_calculate(request: web.Request) -> web.Response:
                 formation_type=formation_type,
                 ratio=ratio,
                 capacity=capacity,
+                target_joiners=target_joiners,
                 guild_id=target_guild if target_guild and target_guild != "*" else None,
             )
 
@@ -949,6 +955,109 @@ async def handle_get_presets(request: web.Request) -> web.Response:
     """Return all Gen 1-12 + Extreme formation presets for the UI dropdown."""
     presets = [p.to_dict() for p in FORMATION_GUIDE_PRESETS]
     return web.json_response(presets)
+
+
+# --- Hero Catalog & Presets Endpoint ---
+
+HERO_CATALOG = [
+    # Attack Buffers
+    {"name": "Jessie", "role": "attack", "buff": "+25% Damage Dealt (Skill 5)"},
+    {"name": "Jasser", "role": "attack", "buff": "+25% Damage Dealt (Skill 5)"},
+    {"name": "Seoyoon", "role": "attack", "buff": "+25% Attack (Skill 5)"},
+    {"name": "Norah", "role": "attack", "buff": "Enemy Damage Reduction & Attack boost"},
+    {"name": "Alonso", "role": "attack", "buff": "AoE Burst & Backline Disruption"},
+    {"name": "Hendrik", "role": "attack", "buff": "Lethality boost & Ranged Amplification"},
+    {"name": "Blanchette", "role": "attack", "buff": "Marksman Vulnerability & Critical Stun"},
+    {"name": "Renee", "role": "attack", "buff": "Lancer Cavalry Penetration"},
+    {"name": "Mia", "role": "attack", "buff": "+20% Lancer Damage & Strike"},
+    {"name": "Greg", "role": "attack", "buff": "+20% Marksman Attack"},
+    {"name": "Wayne", "role": "attack", "buff": "+25% Rally Attack & Shield"},
+    {"name": "Fred", "role": "attack", "buff": "Lancer Critical Surge"},
+    {"name": "Teresa", "role": "attack", "buff": "Marksman Lethality Amplification"},
+
+    # Defense Buffers
+    {"name": "Patrick", "role": "defence", "buff": "+25% HP (Skill 5)"},
+    {"name": "Sergey", "role": "defence", "buff": "+20% Defense (Skill 5)"},
+    {"name": "Ling Xue", "role": "defence", "buff": "+20% Defense (Skill 5)"},
+    {"name": "Ahmose", "role": "defence", "buff": "Frontline Shield & Counter-strike"},
+    {"name": "Edith", "role": "defence", "buff": "Frontline Defensive Aegis & Shielding"},
+    {"name": "Philly", "role": "defence", "buff": "Continuous Rally Health Regeneration"},
+    {"name": "Hector", "role": "defence", "buff": "+20% Infantry HP & Shield"},
+    {"name": "Bradley", "role": "defence", "buff": "Infantry Block & Counter-blow"},
+    {"name": "Magnus", "role": "defence", "buff": "Ironclad Defense & Sustain"},
+    {"name": "Wu Ming", "role": "defence", "buff": "Infantry Absolute Shield"},
+    {"name": "Sonya", "role": "defence", "buff": "Lancer Defense & Armor Reinforcement"},
+
+    # Callers & Utility
+    {"name": "Jeronimo", "role": "caller", "buff": "+15% Rally Attack & Stun"},
+    {"name": "Natalia", "role": "caller", "buff": "+15% Rally Defense & Stun"},
+    {"name": "Molly", "role": "caller", "buff": "+15% Skill Damage & Stun"},
+    {"name": "Zinman", "role": "caller", "buff": "Defense & Rally March Speed"},
+    {"name": "Flint", "role": "caller", "buff": "+20% Infantry Defense & Burn"},
+    {"name": "Gordon", "role": "caller", "buff": "Lancer Charge & Armor Vulnerability"},
+    {"name": "Gatot", "role": "caller", "buff": "Lancer Breaker & Momentum"},
+    {"name": "Lynn", "role": "caller", "buff": "Marksman Critical Boost"},
+]
+
+HERO_PRESETS = [
+    {
+        "id": "attack_all_out",
+        "name": "⚡ Attack All-Out",
+        "heroes": ["Jessie", "Jasser", "Seoyoon", "Norah"],
+        "description": "Max Damage (+50%) & Attack (+25%)",
+    },
+    {
+        "id": "fortress_defense",
+        "name": "🛡️ Fortress Defense",
+        "heroes": ["Patrick", "Sergey", "Ling Xue", "Ahmose"],
+        "description": "Max HP (+25%), Defense (+40%) & Shields",
+    },
+    {
+        "id": "mixed_svs",
+        "name": "⚔️ Mixed / SvS",
+        "heroes": ["Jessie", "Seoyoon", "Patrick", "Sergey"],
+        "description": "Balanced Rally & Reinforcement Buffs",
+    },
+    {
+        "id": "double_damage",
+        "name": "🔥 Double Jessie",
+        "heroes": ["Jessie", "Jasser", "Jessie", "Seoyoon"],
+        "description": "Double Jessie Skill 5 for maximum damage spike",
+    },
+    {
+        "id": "double_hp",
+        "name": "🏰 Double Patrick",
+        "heroes": ["Patrick", "Sergey", "Ling Xue", "Patrick"],
+        "description": "Double Patrick Skill 5 for maximum HP sustain",
+    },
+]
+
+
+async def handle_get_heroes(request: web.Request) -> web.Response:
+    """Return catalog of heroes, presets, and any custom heroes registered in player database."""
+    db = request.app["db"]
+    known_names = {h["name"].lower() for h in HERO_CATALOG}
+    custom_heroes = []
+    try:
+        with db.session() as session:
+            from bot.database.models.player import PlayerHero
+            rows = session.query(PlayerHero.hero_name).distinct().all()
+            for (r_name,) in rows:
+                clean = str(r_name).strip()
+                if clean and clean.lower() not in known_names:
+                    known_names.add(clean.lower())
+                    custom_heroes.append({
+                        "name": clean,
+                        "role": "custom",
+                        "buff": "Expedition Skill Buff",
+                    })
+    except Exception as exc:
+        logger.warning("Could not query distinct heroes from DB: %s", exc)
+
+    return web.json_response({
+        "heroes": HERO_CATALOG + custom_heroes,
+        "presets": HERO_PRESETS,
+    })
 
 
 # --- Rules Config Endpoints ---

@@ -8,7 +8,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Outfit:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="/static/css/style.css?v=2.1">
+  <link rel="stylesheet" href="/static/css/style.css?v=2.2">
 </head>
 <body>
   <div class="app-container">
@@ -491,6 +491,72 @@
                 <button class="btn-preset" data-inf="60" data-lan="20" data-mrk="20">60 / 20 / 20</button>
                 <button class="btn-preset" data-inf="40" data-lan="30" data-mrk="30">40 / 30 / 30</button>
                 <button class="btn-preset" data-inf="34" data-lan="33" data-mrk="33">Balanced</button>
+              </div>
+            </div>
+
+            <!-- Target Joiner Heroes (Top 4 Buffs) -->
+            <div class="form-group">
+              <div class="label-with-meta">
+                <label class="form-label">Target Joiner Heroes (Top 4 Buffs)</label>
+                <span class="form-section-hint">Active Expedition Skills</span>
+              </div>
+
+              <!-- Hero Quick Presets -->
+              <div class="preset-pills mb-12">
+                <span class="preset-hint">Hero Presets:</span>
+                <button type="button" class="btn-preset btn-hero-preset" data-preset="attack_all_out" title="Jessie, Jasser, Seoyoon, Norah">⚡ Attack All-Out</button>
+                <button type="button" class="btn-preset btn-hero-preset" data-preset="fortress_defense" title="Patrick, Sergey, Ling Xue, Ahmose">🛡️ Fortress Defense</button>
+                <button type="button" class="btn-preset btn-hero-preset" data-preset="mixed_svs" title="Jessie, Seoyoon, Patrick, Sergey">⚔️ Mixed / SvS</button>
+                <button type="button" class="btn-preset btn-hero-preset" data-preset="double_damage" title="Jessie, Jasser, Jessie, Seoyoon">🔥 Double Jessie</button>
+                <button type="button" class="btn-preset btn-hero-preset" data-preset="double_hp" title="Patrick, Sergey, Ling Xue, Patrick">🏰 Double Patrick</button>
+                <button type="button" class="btn-preset" id="btn-hero-reset" title="Reset slots to battle mode default">↺ Reset</button>
+              </div>
+
+              <!-- 4 Hero Slots -->
+              <div class="sim-heroes-grid" id="sim-heroes-grid">
+                <div class="sim-hero-slot" data-slot="1">
+                  <div class="sim-slot-header">
+                    <span class="sim-slot-num">Slot 1</span>
+                    <span class="sim-slot-badge">Leader</span>
+                  </div>
+                  <select class="form-input sim-hero-select" id="sim-hero-slot-1">
+                    <option value="Jessie">Jessie</option>
+                  </select>
+                  <div class="sim-slot-buff" id="sim-hero-buff-1">+25% Damage Dealt (Skill 5)</div>
+                </div>
+
+                <div class="sim-hero-slot" data-slot="2">
+                  <div class="sim-slot-header">
+                    <span class="sim-slot-num">Slot 2</span>
+                    <span class="sim-slot-badge">Joiner</span>
+                  </div>
+                  <select class="form-input sim-hero-select" id="sim-hero-slot-2">
+                    <option value="Jasser">Jasser</option>
+                  </select>
+                  <div class="sim-slot-buff" id="sim-hero-buff-2">+25% Damage Dealt (Skill 5)</div>
+                </div>
+
+                <div class="sim-hero-slot" data-slot="3">
+                  <div class="sim-slot-header">
+                    <span class="sim-slot-num">Slot 3</span>
+                    <span class="sim-slot-badge">Joiner</span>
+                  </div>
+                  <select class="form-input sim-hero-select" id="sim-hero-slot-3">
+                    <option value="Seoyoon">Seoyoon</option>
+                  </select>
+                  <div class="sim-slot-buff" id="sim-hero-buff-3">+25% Attack (Skill 5)</div>
+                </div>
+
+                <div class="sim-hero-slot" data-slot="4">
+                  <div class="sim-slot-header">
+                    <span class="sim-slot-num">Slot 4</span>
+                    <span class="sim-slot-badge">Joiner</span>
+                  </div>
+                  <select class="form-input sim-hero-select" id="sim-hero-slot-4">
+                    <option value="Norah">Norah</option>
+                  </select>
+                  <div class="sim-slot-buff" id="sim-hero-buff-4">Enemy Damage Reduction &amp; Attack boost</div>
+                </div>
               </div>
             </div>
 
@@ -1088,6 +1154,6 @@
   <!-- TOAST CONTAINER -->
   <div class="toast-container" id="toast-container"></div>
 
-  <script src="/static/js/app.js?v=2.1"></script>
+  <script src="/static/js/app.js?v=2.2"></script>
 </body>
 </html>

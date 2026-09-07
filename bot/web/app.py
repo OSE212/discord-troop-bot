@@ -17,6 +17,7 @@ from bot.web.api import (
     handle_discord_login,
     handle_download_template_csv,
     handle_get_guilds,
+    handle_get_heroes,
     handle_get_player,
     handle_get_presets,
     handle_get_rules,
@@ -72,6 +73,7 @@ def create_web_app(
     app.router.add_post("/api/calculate", handle_calculate)
 
     app.router.add_get("/api/presets", handle_get_presets)
+    app.router.add_get("/api/heroes", handle_get_heroes)
 
     app.router.add_get("/api/rules", handle_get_rules)
     app.router.add_put("/api/rules", handle_update_rules)
