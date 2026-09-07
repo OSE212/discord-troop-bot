@@ -8,7 +8,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Outfit:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="/static/css/style.css">
+  <link rel="stylesheet" href="/static/css/style.css?v=2.1">
 </head>
 <body>
   <div class="app-container">
@@ -1088,23 +1088,6 @@
   <!-- TOAST CONTAINER -->
   <div class="toast-container" id="toast-container"></div>
 
-  <script src="/static/js/app.js"></script>
-
-  <!-- Hamburger mobile menu script -->
-  <script>
-    const hamburger = document.getElementById('hamburger-btn');
-    const headerCenter = document.getElementById('header-center');
-    hamburger.addEventListener('click', () => {
-      headerCenter.classList.toggle('open');
-      hamburger.classList.toggle('active');
-    });
-    // Close on tab click
-    document.querySelectorAll('.nav-tab').forEach(tab => {
-      tab.addEventListener('click', () => {
-        headerCenter.classList.remove('open');
-        hamburger.classList.remove('active');
-      });
-    });
-  </script>
+  <script src="/static/js/app.js?v=2.1"></script>
 </body>
 </html>
