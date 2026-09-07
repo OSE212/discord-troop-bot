@@ -54,7 +54,9 @@ def serialize_player(player: Player) -> dict[str, Any]:
         "discord_user_id": player.discord_user_id,
         "game_player_id": player.game_player_id,
         "name": player.name,
+        "alliance_tag": player.alliance_tag,
         "march_limit": player.march_limit,
+
         "is_complete": player.is_complete(),
         "created_at": player.created_at.isoformat() if player.created_at else None,
         "updated_at": player.updated_at.isoformat() if player.updated_at else None,
@@ -502,11 +504,12 @@ async def handle_list_players(request: web.Request) -> web.Response:
 
     q = request.query.get("q", "").strip().lower()
     filter_mode = request.query.get("filter", "all").strip().lower()
+    alliance_tag_filter = request.query.get("alliance_tag", "").strip()
 
     db = request.app["db"]
     with db.session() as session:
         repo = PlayerRepository(session)
-        players = repo.list_all(guild_id=target_guild)
+        players = repo.list_all(guild_id=target_guild, alliance_tag=alliance_tag_filter or None)
 
         results = []
         for p in players:
@@ -515,7 +518,8 @@ async def handle_list_players(request: web.Request) -> web.Response:
                 matches_name = q in p.name.lower()
                 matches_game_id = q in p.game_player_id.lower()
                 matches_discord_id = q in p.discord_user_id.lower()
-                if not (matches_name or matches_game_id or matches_discord_id):
+                matches_tag = p.alliance_tag and q in p.alliance_tag.lower()
+                if not (matches_name or matches_game_id or matches_discord_id or matches_tag):
                     continue
 
             # State filter
@@ -533,6 +537,20 @@ async def handle_list_players(request: web.Request) -> web.Response:
             results.append(serialize_player(p))
 
     return web.json_response(results)
+
+
+async def handle_list_alliance_tags(request: web.Request) -> web.Response:
+    user = get_current_user(request)
+    if not user:
+        return web.json_response({"error": "Unauthorized"}, status=401)
+
+    db = request.app["db"]
+    with db.session() as session:
+        repo = PlayerRepository(session)
+        tags = repo.list_distinct_alliance_tags()
+
+    return web.json_response(tags)
+
 
 
 
@@ -670,6 +688,7 @@ async def handle_update_player(request: web.Request) -> web.Response:
         game_player_id = data.get("game_player_id")
         name = data.get("name")
         march_limit = data.get("march_limit")
+        alliance_tag = data.get("alliance_tag")
 
         if march_limit is not None:
             try:
@@ -683,9 +702,11 @@ async def handle_update_player(request: web.Request) -> web.Response:
                 game_player_id=str(game_player_id).strip() if game_player_id else None,
                 name=str(name).strip() if name else None,
                 march_limit=march_limit,
+                alliance_tag=str(alliance_tag).strip() if alliance_tag is not None else None,
             )
         except ValidationError as exc:
             return web.json_response({"error": str(exc)}, status=400)
+
 
         # Update troops
         troops_data = data.get("troops")
@@ -872,6 +893,8 @@ async def handle_calculate(request: web.Request) -> web.Response:
     if isinstance(raw_joiners, list):
         target_joiners = [str(h).strip() for h in raw_joiners if str(h).strip()]
 
+    alliance_tag_filter = str(data.get("alliance_tag", "")).strip()
+
     db = request.app["db"]
     config: RankingConfig = request.app["config"]
 
@@ -886,7 +909,9 @@ async def handle_calculate(request: web.Request) -> web.Response:
                 capacity=capacity,
                 target_joiners=target_joiners,
                 guild_id=target_guild if target_guild and target_guild != "*" else None,
+                alliance_tag=alliance_tag_filter or None,
             )
+
 
         except (InvalidRatioError, InvalidCapacityError) as exc:
             return web.json_response({"error": str(exc)}, status=400)

@@ -10,8 +10,11 @@ const state = {
   activeFilter: 'all',
   searchQuery: '',
   currentGuildId: localStorage.getItem('troop_guild_id') || '*',
+  activeAllianceTag: '',
+  allianceTags: [],
   guilds: [],
   botInfo: null,
+
   sim: {
     mode: 'attack',
     formation_type: 'rally',
@@ -70,6 +73,7 @@ const elements = {
   // Roster
   rosterTableBody: document.getElementById('roster-table-body'),
   rosterSearch: document.getElementById('roster-search'),
+  rosterAllianceSelect: document.getElementById('roster-alliance-select'),
   filterChips: document.querySelectorAll('.filter-chip'),
   btnAddPlayer: document.getElementById('btn-add-player'),
   btnImportCsv: document.getElementById('btn-import-csv'),
@@ -94,7 +98,9 @@ const elements = {
   formName: document.getElementById('form-name'),
   formGameId: document.getElementById('form-game-id'),
   formMarchLimit: document.getElementById('form-march-limit'),
+  formAllianceTag: document.getElementById('form-alliance-tag'),
   formDiscordId: document.getElementById('form-discord-id'),
+
   formInfHelios: document.getElementById('form-inf-helios'),
   formInfLevel: document.getElementById('form-inf-level'),
   formInfQty: document.getElementById('form-inf-qty'),
@@ -132,7 +138,9 @@ const elements = {
   simResultTitle: document.getElementById('sim-result-title'),
   simResultMeta: document.getElementById('sim-result-meta'),
   simGenSelect: document.getElementById('sim-gen-select'),
+  simAllianceSelect: document.getElementById('sim-alliance-select'),
   simPresetSelect: document.getElementById('sim-preset-select'),
+
   simPresetGuide: document.getElementById('sim-preset-guide'),
   simPresetPlace: document.getElementById('sim-preset-place'),
   simPresetCallers: document.getElementById('sim-preset-callers'),
@@ -471,14 +479,39 @@ function renderStats() {
   elements.barMrkFill.style.width = `${Math.max(15, (s.helios_quantities.marksman / maxVal) * 100)}%`;
 }
 
+async function loadAllianceTags() {
+  try {
+    const tags = await fetchApi('/api/alliance-tags');
+    state.allianceTags = tags || [];
+    populateAllianceTagSelects();
+  } catch (err) {
+    console.error('Failed to load alliance tags:', err);
+  }
+}
+
+function populateAllianceTagSelects() {
+  const optionsHtml = '<option value="">All Alliance Tags</option>' +
+    state.allianceTags.map(t => `<option value="${escapeHtml(t)}">${escapeHtml(t)}</option>`).join('');
+
+  if (elements.rosterAllianceSelect) {
+    elements.rosterAllianceSelect.innerHTML = optionsHtml;
+    elements.rosterAllianceSelect.value = state.activeAllianceTag;
+  }
+  if (elements.simAllianceSelect) {
+    elements.simAllianceSelect.innerHTML = optionsHtml;
+  }
+}
+
 // Load Players
 async function loadPlayers() {
   try {
     const q = encodeURIComponent(state.searchQuery);
     const filter = encodeURIComponent(state.activeFilter);
-    const players = await fetchApi(`/api/players?q=${q}&filter=${filter}`);
+    const tag = encodeURIComponent(state.activeAllianceTag);
+    const players = await fetchApi(`/api/players?q=${q}&filter=${filter}&alliance_tag=${tag}`);
     state.players = players;
     renderRoster();
+    loadAllianceTags();
   } catch (err) {
     elements.rosterTableBody.innerHTML = `<tr><td colspan="8" class="empty-cell text-danger">Failed to load players: ${err.message}</td></tr>`;
   }
@@ -507,11 +540,13 @@ function renderRoster() {
       ? '<span class="status-badge complete">Complete</span>'
       : '<span class="status-badge incomplete">Incomplete</span>';
 
+    const tagBadge = p.alliance_tag ? `<span class="user-badge" style="margin-left: 4px; font-weight: 700;">${escapeHtml(p.alliance_tag)}</span>` : '';
+
     return `
       <tr data-id="${p.id}">
         <td>
           <div class="player-identity">
-            <span class="player-main-name">${escapeHtml(p.name)}</span>
+            <span class="player-main-name">${escapeHtml(p.name)} ${tagBadge}</span>
             <span class="player-sub-id">${escapeHtml(p.discord_user_id)}</span>
           </div>
         </td>
@@ -531,6 +566,7 @@ function renderRoster() {
     `;
   }).join('');
 }
+
 
 function escapeHtml(str) {
   if (!str) return '';
@@ -562,7 +598,9 @@ window.editPlayer = async function (id) {
     elements.formName.value = player.name;
     elements.formGameId.value = player.game_player_id;
     elements.formMarchLimit.value = player.march_limit;
+    if (elements.formAllianceTag) elements.formAllianceTag.value = player.alliance_tag || '';
     elements.formDiscordId.value = player.discord_user_id;
+
 
     // Infantry
     elements.formInfHelios.checked = player.troops.infantry.helios;
@@ -702,6 +740,7 @@ async function runSimulation() {
       mode: state.sim.mode,
       formation_type: state.sim.formation_type,
       capacity: capacity,
+      alliance_tag: elements.simAllianceSelect ? elements.simAllianceSelect.value : '',
       ratio: {
         infantry: state.sim.inf,
         lancers: state.sim.lan,
@@ -709,6 +748,7 @@ async function runSimulation() {
       },
       target_joiners: getSelectedHeroJoiners(),
     };
+
 
     const result = await fetchApi('/api/calculate', {
       method: 'POST',
@@ -1224,6 +1264,14 @@ function initEventListeners() {
     });
   });
 
+  // Alliance Tag Filter Listener
+  if (elements.rosterAllianceSelect) {
+    elements.rosterAllianceSelect.addEventListener('change', (e) => {
+      state.activeAllianceTag = e.target.value;
+      loadPlayers();
+    });
+  }
+
   // Player Form Submission
   elements.playerModalClose.addEventListener('click', closePlayerModal);
   elements.playerModalCancel.addEventListener('click', closePlayerModal);
@@ -1244,7 +1292,9 @@ function initEventListeners() {
       name: elements.formName.value.trim(),
       game_player_id: elements.formGameId.value.trim(),
       march_limit: parseInt(elements.formMarchLimit.value, 10),
+      alliance_tag: elements.formAllianceTag ? elements.formAllianceTag.value.trim() : null,
       discord_user_id: elements.formDiscordId.value.trim(),
+
       troops: {
         infantry: {
           helios: elements.formInfHelios.checked,

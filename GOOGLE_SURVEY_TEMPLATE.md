@@ -36,6 +36,11 @@ function createAllianceTroopForm() {
   gameIdItem.setHelpText('Your numeric in-game Player ID found on your profile.');
   gameIdItem.setRequired(false);
 
+  var tagItem = form.addTextItem();
+  tagItem.setTitle('Alliance Tag');
+  tagItem.setHelpText('Your Alliance Tag (e.g. OSE, KNG, or [OSE]). Leave blank if unaffiliated.');
+  tagItem.setRequired(false);
+
   var marchLimitItem = form.addTextItem();
   marchLimitItem.setTitle('March Limit');
   marchLimitItem.setHelpText('Your standard maximum march capacity (e.g. 165000 or 165k).');
@@ -45,6 +50,7 @@ function createAllianceTroopForm() {
   discordItem.setTitle('Discord Username');
   discordItem.setHelpText('Your Discord handle (e.g. username#1234 or @username).');
   discordItem.setRequired(false);
+
 
   // --- Page 2: Infantry ---
   form.addPageBreakItem().setTitle('🛡️ Infantry Specialization');

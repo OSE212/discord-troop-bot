@@ -325,12 +325,16 @@
           </div>
         </div>
 
-        <div class="table-toolbar">
           <div class="search-box">
             <svg class="search-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
               <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
             </svg>
-            <input type="text" id="roster-search" placeholder="Search by player name, Game ID, or Discord ID...">
+            <input type="text" id="roster-search" placeholder="Search by name, Tag, Game ID, Discord ID...">
+          </div>
+          <div class="alliance-tag-wrap" style="min-width: 140px;">
+            <select class="form-input" id="roster-alliance-select" style="padding: 6px 12px; font-size: 13px;">
+              <option value="">All Alliance Tags</option>
+            </select>
           </div>
           <div class="filter-group">
             <button class="filter-chip active" data-filter="all">All</button>
@@ -339,6 +343,7 @@
             <button class="filter-chip" data-filter="helios">Has Helios</button>
           </div>
         </div>
+
 
         <div class="table-card">
           <div class="table-responsive">
@@ -379,15 +384,20 @@
           <div class="glass-card setup-card">
             <h3 class="card-title mb-16">Formation Parameters</h3>
 
-            <!-- Generation Preset Selector -->
+            <!-- Generation & Alliance Tag Preset Selectors -->
             <div class="form-group">
-              <label class="form-label">Generation Preset <span class="form-section-hint">(optional — auto-fills ratios &amp; joiners)</span></label>
+              <label class="form-label">Generation &amp; Alliance Tag Filters</label>
               <div class="gen-preset-row">
                 <select class="form-input" id="sim-gen-select">
                   <option value="">— Manual Setup —</option>
                 </select>
+                <select class="form-input" id="sim-alliance-select">
+                  <option value="">All Alliance Tags</option>
+                </select>
+              </div>
+              <div class="gen-preset-row" style="margin-top: 8px;">
                 <select class="form-input" id="sim-preset-select" disabled>
-                  <option value="">— Pick formation —</option>
+                  <option value="">— Pick formation preset —</option>
                 </select>
               </div>
               <div class="preset-guide-card hidden" id="sim-preset-guide">
@@ -397,6 +407,7 @@
                 <div class="preset-guide-notes" id="sim-preset-notes"></div>
               </div>
             </div>
+
 
             <div class="form-group">
               <label class="form-label">Battle Mode</label>
@@ -886,10 +897,16 @@
               <input type="number" class="form-input" id="form-march-limit" required placeholder="e.g. 144000">
             </div>
             <div class="form-group">
-              <label class="form-label" for="form-discord-id">Discord User ID (Optional)</label>
-              <input type="text" class="form-input" id="form-discord-id" placeholder="Leave blank for manual entry">
+              <label class="form-label" for="form-alliance-tag">Alliance Tag (Optional)</label>
+              <input type="text" class="form-input" id="form-alliance-tag" placeholder="e.g. [OSE] or OSE">
             </div>
           </div>
+
+          <div class="form-group">
+            <label class="form-label" for="form-discord-id">Discord User ID (Optional)</label>
+            <input type="text" class="form-input" id="form-discord-id" placeholder="Leave blank for manual entry">
+          </div>
+
 
           <div class="form-section-title mt-20">Troop Types &amp; Levels</div>
 

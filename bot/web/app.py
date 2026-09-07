@@ -23,8 +23,10 @@ from bot.web.api import (
     handle_get_rules,
     handle_get_stats,
     handle_import_players_csv,
+    handle_list_alliance_tags,
     handle_list_players,
     handle_login_passkey,
+
     handle_logout,
     handle_update_player,
     handle_update_rules,
@@ -63,7 +65,9 @@ def create_web_app(
 
     app.router.add_get("/api/stats", handle_get_stats)
     app.router.add_get("/api/players", handle_list_players)
+    app.router.add_get("/api/alliance-tags", handle_list_alliance_tags)
     app.router.add_get("/api/players/template-csv", handle_download_template_csv)
+
     app.router.add_post("/api/players", handle_create_player)
     app.router.add_post("/api/players/import", handle_import_players_csv)
     app.router.add_get("/api/players/{id}", handle_get_player)

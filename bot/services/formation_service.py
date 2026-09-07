@@ -68,6 +68,7 @@ class FormationService:
         capacity: int,
         target_joiners: Optional[list[str]] = None,
         guild_id: Optional[str] = None,
+        alliance_tag: Optional[str] = None,
     ) -> FormationResult:
         request = FormationRequest(
             mode=mode,
@@ -76,7 +77,8 @@ class FormationService:
             capacity=capacity,
             target_joiners=tuple(target_joiners or ()),
         )
-        all_players = self.repository.list_all(guild_id=guild_id)
+        all_players = self.repository.list_all(guild_id=guild_id, alliance_tag=alliance_tag)
+
         candidates = [
             p for p in (_to_optimizer_player(pl) for pl in all_players) if p is not None
         ]

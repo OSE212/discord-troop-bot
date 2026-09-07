@@ -125,6 +125,7 @@ class PlayerService:
         game_player_id: Optional[str] = None,
         name: Optional[str] = None,
         march_limit: Optional[int] = None,
+        alliance_tag: Optional[str] = None,
     ) -> Player:
         if game_player_id is not None or name is not None:
             _validate_identity(
@@ -137,7 +138,9 @@ class PlayerService:
             game_player_id=game_player_id,
             name=name,
             march_limit=march_limit,
+            alliance_tag=alliance_tag,
         )
+
 
     def update_troop_type(
         self,

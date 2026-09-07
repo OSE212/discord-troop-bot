@@ -50,6 +50,9 @@ class Player(Base):
     )
     game_player_id: Mapped[str] = mapped_column(String(64), nullable=False)
     name: Mapped[str] = mapped_column(String(128), nullable=False)
+    alliance_tag: Mapped[Optional[str]] = mapped_column(
+        String(32), nullable=True, index=True
+    )
     march_limit: Mapped[int] = mapped_column(Integer, nullable=False)
 
 

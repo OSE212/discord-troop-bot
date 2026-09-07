@@ -38,15 +38,24 @@ class PlayerRepository:
     def get_by_id(self, player_id: int) -> Optional[Player]:
         return self.session.get(Player, player_id)
 
-    def list_all(self, guild_id: Optional[str] = None) -> list[Player]:
+    def list_all(
+        self, guild_id: Optional[str] = None, alliance_tag: Optional[str] = None
+    ) -> list[Player]:
         stmt = select(Player).order_by(Player.name)
         if guild_id and guild_id != "*":
             stmt = stmt.where((Player.guild_id == str(guild_id)) | (Player.guild_id.is_(None)))
+        if alliance_tag and alliance_tag != "*":
+            tag_clean = alliance_tag.strip().upper().lstrip("[").rstrip("]")
+            stmt = stmt.where(Player.alliance_tag.ilike(f"%{tag_clean}%"))
         return list(self.session.execute(stmt).scalars().all())
 
     def list_distinct_guild_ids(self) -> list[str]:
         stmt = select(Player.guild_id).where(Player.guild_id.isnot(None)).distinct()
         return [str(g) for g in self.session.execute(stmt).scalars().all() if g]
+
+    def list_distinct_alliance_tags(self) -> list[str]:
+        stmt = select(Player.alliance_tag).where(Player.alliance_tag.isnot(None)).distinct()
+        return [str(t) for t in self.session.execute(stmt).scalars().all() if t]
 
     # -- writes -------------------------------------------------------
 
@@ -60,15 +69,22 @@ class PlayerRepository:
         troop_data: dict[TroopType, dict],
         heroes_data: Optional[dict[str, dict]] = None,
         guild_id: Optional[str] = None,
+        alliance_tag: Optional[str] = None,
     ) -> Player:
         """Create a brand new player with all three troop profiles and optional heroes."""
+        tag_clean = alliance_tag.strip().upper() if alliance_tag else None
+        if tag_clean and not tag_clean.startswith("["):
+            tag_clean = f"[{tag_clean}]"
+
         player = Player(
             guild_id=str(guild_id) if guild_id else None,
             discord_user_id=str(discord_user_id),
             game_player_id=game_player_id,
             name=name,
+            alliance_tag=tag_clean,
             march_limit=march_limit,
         )
+
 
         for troop_type in TroopType:
             data = troop_data[troop_type]
@@ -126,6 +142,7 @@ class PlayerRepository:
         game_player_id: Optional[str] = None,
         name: Optional[str] = None,
         march_limit: Optional[int] = None,
+        alliance_tag: Optional[str] = None,
     ) -> Player:
         if game_player_id is not None:
             player.game_player_id = game_player_id
@@ -133,8 +150,14 @@ class PlayerRepository:
             player.name = name
         if march_limit is not None:
             player.march_limit = march_limit
+        if alliance_tag is not None:
+            tag_clean = alliance_tag.strip().upper() if alliance_tag else None
+            if tag_clean and not tag_clean.startswith("["):
+                tag_clean = f"[{tag_clean}]"
+            player.alliance_tag = tag_clean
         self.session.flush()
         return player
+
 
     def update_troop_profile(
         self,

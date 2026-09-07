@@ -174,6 +174,10 @@ HEADER_SYNONYMS: dict[str, set[str]] = {
         "troop capacity", "march", "squad limit", "squad capacity",
         "squad size", "marchlimit", "max march",
     },
+    "alliance_tag": {
+        "alliance tag", "alliance", "tag", "alliance_tag", "alliancetag",
+        "guild tag", "guild", "clan", "clan tag",
+    },
     "discord_user_id": {
         "discord id", "discord", "discord tag", "discord username",
         "discord user id", "discord name", "user id", "discordid",
@@ -427,6 +431,8 @@ class CsvImporter:
                             "skill_level": skill_level,
                         }
 
+            alliance_tag = get_val("alliance_tag") or None
+
             # Upsert into database
             try:
                 # 1. Match by game_player_id
@@ -442,6 +448,7 @@ class CsvImporter:
                         game_player_id=game_id,
                         name=name,
                         march_limit=march_limit,
+                        alliance_tag=alliance_tag,
                     )
                     for t_type, t_data in troop_configs.items():
                         self.repo.update_troop_profile(
@@ -474,8 +481,10 @@ class CsvImporter:
                         troop_data=troop_configs,
                         heroes_data=heroes_data,
                         guild_id=guild_id,
+                        alliance_tag=alliance_tag,
                     )
                     result.created += 1
+
 
 
             except Exception as exc:
