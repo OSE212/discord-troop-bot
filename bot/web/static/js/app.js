@@ -336,10 +336,59 @@ function switchTab(tabId) {
     pane.classList.toggle('active', pane.id === `pane-${tabId}`);
   });
 
+  // Close mobile nav menu when a tab is selected
+  closeMobileMenu();
+
   if (tabId === 'overview') loadStats();
   if (tabId === 'roster') loadPlayers();
   if (tabId === 'rules') loadRules();
 }
+
+// Mobile Hamburger Menu
+const hamburgerBtn = document.getElementById('hamburger-btn');
+const headerCenter = document.getElementById('header-center');
+const headerRight  = document.querySelector('.header-right');
+
+function openMobileMenu() {
+  if (headerCenter) headerCenter.classList.add('open');
+  if (headerRight)  headerRight.classList.add('open');
+  if (hamburgerBtn) hamburgerBtn.classList.add('active');
+}
+
+function closeMobileMenu() {
+  if (headerCenter) headerCenter.classList.remove('open');
+  if (headerRight)  headerRight.classList.remove('open');
+  if (hamburgerBtn) hamburgerBtn.classList.remove('active');
+}
+
+function toggleMobileMenu() {
+  const isOpen = headerCenter && headerCenter.classList.contains('open');
+  if (isOpen) {
+    closeMobileMenu();
+  } else {
+    openMobileMenu();
+  }
+}
+
+if (hamburgerBtn) {
+  hamburgerBtn.addEventListener('click', (e) => {
+    e.stopPropagation();
+    toggleMobileMenu();
+  });
+}
+
+// Close mobile menu when clicking outside the header
+document.addEventListener('click', (e) => {
+  const header = document.querySelector('.app-header');
+  const menuPanel = headerCenter;
+  if (
+    menuPanel && menuPanel.classList.contains('open') &&
+    header && !header.contains(e.target) &&
+    menuPanel && !menuPanel.contains(e.target)
+  ) {
+    closeMobileMenu();
+  }
+});
 
 // Load Stats
 async function loadStats() {

@@ -2136,4 +2136,361 @@ body {
   background: transparent;
 }
 
+/* ============================================================
+   RESPONSIVE — TABLET  (≤ 1024px)
+   ============================================================ */
+@media (max-width: 1024px) {
+  .main-content {
+    padding: 24px 20px;
+  }
 
+  .metrics-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .cards-split-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .simulator-layout {
+    flex-direction: column;
+  }
+
+  .setup-card,
+  .results-card {
+    width: 100%;
+  }
+
+  /* Hide brand subtitle to save space */
+  .brand-subtitle {
+    display: none;
+  }
+
+  /* Nav tabs: smaller padding */
+  .nav-tab {
+    padding: 7px 12px;
+    font-size: 12px;
+  }
+
+  /* Header right: tighten gaps */
+  .header-right {
+    gap: 10px;
+  }
+
+  /* Hide "Online" status text on tablet */
+  .status-text {
+    display: none;
+  }
+}
+
+/* ============================================================
+   RESPONSIVE — MOBILE  (≤ 768px)
+   ============================================================ */
+@media (max-width: 768px) {
+  /* ---- HEADER ---- */
+  :root {
+    --header-height: 60px;
+  }
+
+  .app-header {
+    padding: 0 16px;
+    flex-wrap: nowrap;
+    position: relative;
+  }
+
+  /* Show hamburger button */
+  .hamburger {
+    display: flex;
+    order: 3;
+    margin-left: auto;
+  }
+
+  /* Brand stays left */
+  .header-left {
+    order: 1;
+    gap: 8px;
+  }
+
+  .logo-mark {
+    width: 36px;
+    height: 36px;
+  }
+
+  .logo-img {
+    width: 32px;
+    height: 32px;
+  }
+
+  .brand-title {
+    font-size: 14px;
+    letter-spacing: 1px;
+  }
+
+  .brand-subtitle {
+    display: none;
+  }
+
+  /* Center nav collapses to a dropdown panel */
+  .header-center {
+    display: none;
+    position: absolute;
+    top: var(--header-height);
+    left: 0;
+    right: 0;
+    background: rgba(10, 15, 26, 0.98);
+    backdrop-filter: blur(20px);
+    border-bottom: 1px solid var(--border-subtle);
+    padding: 12px 16px;
+    z-index: 300;
+    flex-direction: column;
+    order: 4;
+  }
+
+  .header-center.open {
+    display: flex;
+  }
+
+  /* Nav tabs stack vertically inside mobile menu */
+  .nav-tabs {
+    flex-direction: column;
+    border-radius: var(--radius-md);
+    width: 100%;
+    gap: 4px;
+  }
+
+  .nav-tab {
+    width: 100%;
+    justify-content: flex-start;
+    padding: 10px 14px;
+    border-radius: var(--radius-sm);
+    font-size: 14px;
+  }
+
+  /* Header-right collapses into mobile menu too */
+  .header-right {
+    display: none;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 10px;
+    padding-top: 12px;
+    margin-top: 10px;
+    border-top: 1px solid var(--border-subtle);
+    width: 100%;
+    order: 5;
+  }
+
+  .header-right.open {
+    display: flex;
+  }
+
+  /* User pill: full width */
+  .user-pill {
+    width: 100%;
+    justify-content: space-between;
+  }
+
+  .user-name {
+    max-width: none;
+    flex: 1;
+  }
+
+  /* System status visible again */
+  .system-status {
+    display: flex;
+  }
+  .status-text {
+    display: inline;
+  }
+
+  /* ---- MAIN CONTENT ---- */
+  .main-content {
+    padding: 16px 12px;
+  }
+
+  /* ---- PANE HEADER ---- */
+  .pane-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 12px;
+    margin-bottom: 20px;
+  }
+
+  .pane-title {
+    font-size: 20px;
+  }
+
+  .header-actions {
+    width: 100%;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  .header-actions .btn,
+  .header-actions a.btn {
+    flex: 1 1 auto;
+    justify-content: center;
+    font-size: 13px;
+    padding: 9px 14px;
+  }
+
+  /* ---- METRICS GRID ---- */
+  .metrics-grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 12px;
+  }
+
+  .metric-card {
+    padding: 16px;
+  }
+
+  .metric-value {
+    font-size: 26px;
+  }
+
+  /* ---- SPLIT GRID ---- */
+  .cards-split-grid {
+    grid-template-columns: 1fr;
+    gap: 16px;
+  }
+
+  /* ---- TABLE TOOLBAR ---- */
+  .table-toolbar {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .search-box {
+    max-width: 100%;
+  }
+
+  .filter-group {
+    justify-content: flex-start;
+  }
+
+  /* ---- ROSTER ACTION BAR ---- */
+  #pane-roster .header-actions {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+  }
+
+  /* Add Player (primary) spans full width at the bottom */
+  #btn-add-player {
+    grid-column: 1 / -1;
+  }
+
+  /* ---- SIMULATOR ---- */
+  .simulator-layout {
+    flex-direction: column;
+    gap: 16px;
+  }
+
+  /* ---- RULES LAYOUT ---- */
+  .rules-layout {
+    flex-direction: column;
+    gap: 16px;
+  }
+
+  /* ---- GUIDE GRID ---- */
+  .guide-grid {
+    grid-template-columns: 1fr;
+  }
+
+  /* ---- MODALS ---- */
+  .modal-overlay {
+    padding: 0;
+    align-items: flex-end;
+  }
+
+  .modal-container {
+    width: 100%;
+    max-width: 100%;
+    border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+    max-height: 92vh;
+    overflow-y: auto;
+  }
+
+  .modal-container.medium {
+    max-height: 92vh;
+  }
+
+  .modal-body {
+    padding: 16px;
+  }
+
+  .modal-footer {
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .modal-footer .btn {
+    width: 100%;
+    justify-content: center;
+  }
+
+  /* ---- HERO ROW IN MODAL ---- */
+  .hero-row {
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  .hero-row .form-input {
+    min-width: 80px;
+  }
+
+  /* ---- GLASS CARD padding ---- */
+  .glass-card {
+    padding: 16px;
+  }
+
+  /* ---- Code block ---- */
+  .code-block-pre {
+    font-size: 10.5px;
+    max-height: 200px;
+  }
+
+  /* ---- Slider rows ---- */
+  .slider-row {
+    flex-wrap: wrap;
+    gap: 6px;
+  }
+
+  .slider-val-wrap {
+    min-width: 70px;
+  }
+}
+
+/* ============================================================
+   RESPONSIVE — SMALL MOBILE  (≤ 480px)
+   ============================================================ */
+@media (max-width: 480px) {
+  .metrics-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .metric-value {
+    font-size: 28px;
+  }
+
+  #pane-roster .header-actions {
+    grid-template-columns: 1fr;
+  }
+
+  #btn-add-player {
+    grid-column: auto;
+  }
+
+  .nav-tab .tab-icon {
+    width: 18px;
+    height: 18px;
+  }
+
+  /* Preset pills wrap */
+  .preset-pills {
+    flex-wrap: wrap;
+  }
+
+  .brand-title {
+    font-size: 13px;
+  }
+}
