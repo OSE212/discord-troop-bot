@@ -287,6 +287,16 @@
             <p class="pane-desc">Manage registered players, update march limits, and configure troop levels.</p>
           </div>
           <div class="header-actions">
+            <button class="btn btn-secondary" id="btn-survey-generator" title="1-Click Google Survey Setup (Google Apps Script)">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+                <polyline points="14 2 14 8 20 8"/>
+                <line x1="16" y1="13" x2="8" y2="13"/>
+                <line x1="16" y1="17" x2="8" y2="17"/>
+                <polyline points="10 9 9 9 8 9"/>
+              </svg>
+              Google Survey
+            </button>
             <a href="/api/players/template-csv" download="alliance_roster_template.csv" class="btn btn-secondary" id="btn-download-template" title="Download Excel/CSV Roster Template">
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                 <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
@@ -718,9 +728,18 @@
           <div class="glass-card guide-card">
             <div class="guide-step-badge">STEP 4</div>
             <h3 class="card-title mt-8 mb-8">4. Bulk Import (Google Survey)</h3>
-            <p class="text-muted text-sm mb-12">Gather member data with Google Forms:</p>
+            <p class="text-muted text-sm mb-12">Gather member data in bulk with Google Forms:</p>
             <div class="code-pill">Roster ➔ Import CSV</div>
-            <p class="text-muted text-sm mt-8">Download our ready template via <strong>Template CSV</strong> or export directly from a Google Sheet. The importer matches questions automatically and updates all troop/hero stats instantly.</p>
+            <p class="text-muted text-sm mt-8 mb-12">Use our 1-click Google Apps Script generator to auto-create the survey in Google Drive, collect responses in Google Sheets, export to CSV, and import!</p>
+            <button class="btn btn-secondary btn-sm" id="btn-guide-survey">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+                <polyline points="14 2 14 8 20 8"/>
+                <line x1="16" y1="13" x2="8" y2="13"/>
+                <line x1="16" y1="17" x2="8" y2="17"/>
+              </svg>
+              <span>⚡ Generate Google Survey</span>
+            </button>
           </div>
         </div>
 
@@ -957,7 +976,111 @@
           <button type="submit" class="btn btn-secondary btn-block">Log In with Passkey</button>
         </form>
       </div>
+    </div>
+  </div>
 
+  <!-- MODAL: GOOGLE SURVEY GENERATOR -->
+  <div class="modal-overlay" id="survey-modal">
+    <div class="modal-container medium">
+      <div class="modal-header">
+        <h3 class="modal-title">⚡ Google Survey Generator (1-Click)</h3>
+        <button class="modal-close" id="survey-modal-close">&times;</button>
+      </div>
+      <div class="modal-body">
+        <p class="text-muted text-sm mb-16">
+          Generate an interactive Google Form in 5 seconds to collect member march limits, FC levels, Helios, and hero stars.
+        </p>
+
+        <div class="survey-steps-list">
+          <div class="survey-step-item">
+            <span class="survey-step-num">1</span>
+            <div>
+              <strong>Copy the Apps Script:</strong> Click the <span class="text-cyan">Copy Script</span> button below.
+            </div>
+          </div>
+          <div class="survey-step-item">
+            <span class="survey-step-num">2</span>
+            <div>
+              <strong>Open Google Apps Script:</strong> Go to <a href="https://script.google.com" target="_blank" rel="noopener" class="text-cyan" style="text-decoration: underline;">script.google.com</a> (or in any Google Sheet: <em>Extensions ➔ Apps Script</em>).
+            </div>
+          </div>
+          <div class="survey-step-item">
+            <span class="survey-step-num">3</span>
+            <div>
+              <strong>Paste &amp; Run:</strong> Paste the code into the editor, click <strong>Save</strong>, then click <strong>Run</strong>.
+            </div>
+          </div>
+          <div class="survey-step-item">
+            <span class="survey-step-num">4</span>
+            <div>
+              <strong>Export &amp; Import:</strong> Share the generated form link with your alliance. In the connected Google Sheet, download as <em>CSV</em> and upload it here via <strong>Import CSV</strong>!
+            </div>
+          </div>
+        </div>
+
+        <div class="code-block-wrap">
+          <div class="code-block-header">
+            <span>Google Apps Script (createAllianceTroopForm.gs)</span>
+            <button type="button" class="btn btn-secondary btn-sm" id="btn-copy-survey-script">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <rect x="9" y="9" width="13" height="13" rx="2" ry="2"/>
+                <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>
+              </svg>
+              <span>Copy Script</span>
+            </button>
+          </div>
+          <pre class="code-block-pre" id="survey-script-code"><code>function createAllianceTroopForm() {
+  var form = FormApp.create('Alliance Troop &amp; Hero Registration');
+  form.setDescription('Please register your account stats, Fire Crystal (FC) troop levels, Helios counts, and key hero stars.\nThis data is used by alliance leadership to calculate optimal battle formations.');
+
+  // 1. Account Info
+  form.addTextItem().setTitle('In-Game Name').setRequired(true);
+  form.addTextItem().setTitle('Game ID').setHelpText('In-game numeric Player ID').setRequired(false);
+  form.addTextItem().setTitle('March Limit').setHelpText('e.g. 165000 or 165k').setRequired(true);
+  form.addTextItem().setTitle('Discord Username').setHelpText('e.g. username#1234').setRequired(false);
+
+  // 2. Troop FC Levels
+  var fcChoices = ['FC 10','FC 9','FC 8','FC 7','FC 6','FC 5','FC 4','FC 3','FC 2','FC 1','Level 30','Level 29','Level 28','Level 27','Level 26','Level 25'];
+  var heliosChoices = ['No', 'Yes', 'Yes - 50k', 'Yes - 100k', 'Yes - 150k', 'Yes - 200k+'];
+
+  // 3. Infantry
+  form.addPageBreakItem().setTitle('🛡️ Infantry Specialization');
+  form.addListItem().setTitle('Infantry FC').setChoiceValues(fcChoices).setRequired(true);
+  form.addListItem().setTitle('Infantry Helios').setChoiceValues(heliosChoices).setRequired(true);
+
+  // 4. Lancers
+  form.addPageBreakItem().setTitle('🐎 Lancers / Cavalry Specialization');
+  form.addListItem().setTitle('Lancers FC').setChoiceValues(fcChoices).setRequired(true);
+  form.addListItem().setTitle('Lancers Helios').setChoiceValues(heliosChoices).setRequired(true);
+
+  // 5. Marksman
+  form.addPageBreakItem().setTitle('🏹 Marksman / Archers Specialization');
+  form.addListItem().setTitle('Marksman FC').setChoiceValues(fcChoices).setRequired(true);
+  form.addListItem().setTitle('Marksman Helios').setChoiceValues(heliosChoices).setRequired(true);
+
+  // 6. Joiner Heroes
+  form.addPageBreakItem().setTitle('⭐ Key Joiner Heroes');
+  var heroLevels = ['Not Owned', '1 Star', '2 Stars', '3 Stars', '4 Stars', '5 Stars (Max)'];
+  var keyHeroes = ['Jessie', 'Patrick', 'Jasser', 'Seoyoon', 'Sergey', 'Ling Xue', 'Ahmose'];
+  for (var i = 0; i < keyHeroes.length; i++) {
+    form.addListItem().setTitle(keyHeroes[i]).setChoiceValues(heroLevels).setRequired(false);
+  }
+
+  Logger.log('Form created: ' + form.getEditUrl());
+  Logger.log('Share Link for Members: ' + form.getPublishedUrl());
+}</code></pre>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <a href="https://script.google.com" target="_blank" rel="noopener" class="btn btn-secondary">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/>
+            <polyline points="15 3 21 3 21 9"/>
+            <line x1="10" y1="14" x2="21" y2="3"/>
+          </svg>
+          Open Google Apps Script
+        </a>
+        <button class="btn btn-primary" id="survey-modal-done">Done</button>
       </div>
     </div>
   </div>

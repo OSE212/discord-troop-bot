@@ -70,9 +70,17 @@ const elements = {
   filterChips: document.querySelectorAll('.filter-chip'),
   btnAddPlayer: document.getElementById('btn-add-player'),
   btnImportCsv: document.getElementById('btn-import-csv'),
+  btnSurveyGenerator: document.getElementById('btn-survey-generator'),
+  btnGuideSurvey: document.getElementById('btn-guide-survey'),
   csvFileInput: document.getElementById('csv-file-input'),
   btnQuickAddPlayer: document.getElementById('btn-quick-add-player'),
   btnQuickCalculate: document.getElementById('btn-quick-calculate'),
+  // Survey Modal
+  surveyModal: document.getElementById('survey-modal'),
+  surveyModalClose: document.getElementById('survey-modal-close'),
+  surveyModalDone: document.getElementById('survey-modal-done'),
+  btnCopySurveyScript: document.getElementById('btn-copy-survey-script'),
+  surveyScriptCode: document.getElementById('survey-script-code'),
   // Modals
   playerModal: document.getElementById('player-modal'),
   playerModalTitle: document.getElementById('player-modal-title'),
@@ -292,6 +300,31 @@ function openAuthModal() {
 
 function closeAuthModal() {
   elements.authModal.classList.remove('active');
+}
+
+function openSurveyModal() {
+  if (elements.surveyModal) elements.surveyModal.classList.add('active');
+}
+
+function closeSurveyModal() {
+  if (elements.surveyModal) elements.surveyModal.classList.remove('active');
+}
+
+async function copySurveyScript() {
+  const code = elements.surveyScriptCode ? elements.surveyScriptCode.innerText : '';
+  if (!code) return;
+  try {
+    await navigator.clipboard.writeText(code);
+    showToast('Google Apps Script copied to clipboard! 📋', 'success');
+  } catch (e) {
+    const textarea = document.createElement('textarea');
+    textarea.value = code;
+    document.body.appendChild(textarea);
+    textarea.select();
+    document.execCommand('copy');
+    textarea.remove();
+    showToast('Google Apps Script copied to clipboard! 📋', 'success');
+  }
 }
 
 // Navigation Tabs
@@ -863,10 +896,26 @@ function initEventListeners() {
     }
   });
 
-  // Quick action buttons
   elements.btnQuickCalculate.addEventListener('click', () => switchTab('simulator'));
   elements.btnQuickAddPlayer.addEventListener('click', openAddPlayerModal);
   elements.btnAddPlayer.addEventListener('click', openAddPlayerModal);
+
+  // Survey Generator Modal
+  if (elements.btnSurveyGenerator) {
+    elements.btnSurveyGenerator.addEventListener('click', openSurveyModal);
+  }
+  if (elements.btnGuideSurvey) {
+    elements.btnGuideSurvey.addEventListener('click', openSurveyModal);
+  }
+  if (elements.surveyModalClose) {
+    elements.surveyModalClose.addEventListener('click', closeSurveyModal);
+  }
+  if (elements.surveyModalDone) {
+    elements.surveyModalDone.addEventListener('click', closeSurveyModal);
+  }
+  if (elements.btnCopySurveyScript) {
+    elements.btnCopySurveyScript.addEventListener('click', copySurveyScript);
+  }
 
   // CSV Import
   if (elements.btnImportCsv && elements.csvFileInput) {
