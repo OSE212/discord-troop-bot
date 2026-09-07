@@ -222,11 +222,18 @@ async function fetchApi(url, options = {}) {
       openAuthModal();
       throw new Error('Authentication required');
     }
-    const data = await res.json();
+    const text = await res.text();
+    let data;
+    try {
+      data = JSON.parse(text);
+    } catch (e) {
+      throw new Error(`Server returned non-JSON response (${res.status}): ${text.substring(0, 100)}`);
+    }
     if (!res.ok) {
       throw new Error(data.error || 'Server error');
     }
     return data;
+
   } catch (err) {
     throw err;
   }
