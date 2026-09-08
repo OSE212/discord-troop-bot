@@ -8,9 +8,15 @@ from bot.database.base import Database
 from bot.rules.configuration import RankingConfig
 from bot.settings import Settings
 from bot.web.api import (
+    handle_attendance_check_in,
+    handle_attendance_reset,
+    handle_attendance_select_all,
+    handle_calculate_rallies,
+    handle_get_attendance,
     handle_auth_me,
     handle_bot_info,
     handle_calculate,
+    handle_clear_players,
     handle_create_player,
     handle_delete_player,
     handle_discord_callback,
@@ -70,6 +76,8 @@ def create_web_app(
 
     app.router.add_post("/api/players", handle_create_player)
     app.router.add_post("/api/players/import", handle_import_players_csv)
+    app.router.add_delete("/api/players/clear", handle_clear_players)
+    app.router.add_post("/api/players/clear", handle_clear_players)
     app.router.add_get("/api/players/{id}", handle_get_player)
     app.router.add_put("/api/players/{id}", handle_update_player)
     app.router.add_delete("/api/players/{id}", handle_delete_player)
@@ -78,6 +86,12 @@ def create_web_app(
 
     app.router.add_get("/api/presets", handle_get_presets)
     app.router.add_get("/api/heroes", handle_get_heroes)
+
+    app.router.add_get("/api/attendance", handle_get_attendance)
+    app.router.add_post("/api/attendance/check-in", handle_attendance_check_in)
+    app.router.add_post("/api/attendance/select-all", handle_attendance_select_all)
+    app.router.add_post("/api/attendance/reset", handle_attendance_reset)
+    app.router.add_post("/api/rallies/calculate", handle_calculate_rallies)
 
     app.router.add_get("/api/rules", handle_get_rules)
     app.router.add_put("/api/rules", handle_update_rules)

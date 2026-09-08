@@ -1582,9 +1582,223 @@ function initEventListeners() {
   elements.btnSaveRules.addEventListener('click', saveRules);
 }
 
+// ==========================================
+// WAR ROOM LOGIC
+// ==========================================
+let warRoomAttendance = new Set();
+let warRoomPlayers = []; // Cached array
+
+async function loadWarRoom() {
+  try {
+    const [attRes, playersRes] = await Promise.all([
+      fetchApi('/api/attendance'),
+      fetchApi('/api/players')
+    ]);
+    warRoomAttendance = new Set(attRes.checked_in_ids || []);
+    warRoomPlayers = playersRes || [];
+    
+    document.getElementById('war-online-count').textContent = warRoomAttendance.size;
+    renderWarRoomTable();
+  } catch (err) {
+    showToast('Failed to load War Room: ' + err.message, 'error');
+  }
+}
+
+function renderWarRoomTable() {
+  const tbody = document.getElementById('war-checkin-table-body');
+  if (!tbody) return;
+  tbody.innerHTML = '';
+  if (warRoomPlayers.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="6" class="empty-cell">No players found</td></tr>';
+    return;
+  }
+  
+  warRoomPlayers.forEach(p => {
+    const isChecked = warRoomAttendance.has(p.id);
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td style="text-align: center;">
+        <input type="checkbox" class="war-check" data-id="${p.id}" ${isChecked ? 'checked' : ''} style="width: 18px; height: 18px; cursor: pointer;">
+      </td>
+      <td><strong>${escapeHtml(p.in_game_name)}</strong></td>
+      <td>${escapeHtml(p.alliance_tag || '-')}</td>
+      <td>FC ${p.troops?.infantry?.level || 0}</td>
+      <td>${(p.troops?.infantry?.is_helios || p.troops?.lancer?.is_helios || p.troops?.marksman?.is_helios) ? '<span class="badge-helios">Helios</span>' : '-'}</td>
+      <td>${p.march_limit.toLocaleString()}</td>
+    `;
+    const cb = tr.querySelector('.war-check');
+    cb.addEventListener('change', async (e) => {
+      const pid = parseInt(e.target.dataset.id, 10);
+      const online = e.target.checked;
+      try {
+        const res = await fetchApi('/api/attendance/check-in', {
+          method: 'POST',
+          body: JSON.stringify({ player_ids: [pid], is_online: online })
+        });
+        document.getElementById('war-online-count').textContent = res.total_online;
+        if (online) warRoomAttendance.add(pid); else warRoomAttendance.delete(pid);
+      } catch (err) {
+        showToast(err.message, 'error');
+        e.target.checked = !online; // revert
+      }
+    });
+    tbody.appendChild(tr);
+  });
+}
+
+function setupWarRoomListeners() {
+  const btnSelectAll = document.getElementById('btn-war-select-all');
+  const btnClear = document.getElementById('btn-war-clear');
+  const btnCalc = document.getElementById('btn-war-calculate');
+  
+  if (btnSelectAll) {
+    btnSelectAll.addEventListener('click', async () => {
+      const allIds = warRoomPlayers.map(p => p.id);
+      try {
+        const res = await fetchApi('/api/attendance/select-all', {
+          method: 'POST',
+          body: JSON.stringify({ player_ids: allIds })
+        });
+        warRoomAttendance = new Set(allIds);
+        document.getElementById('war-online-count').textContent = res.total_online;
+        renderWarRoomTable();
+        showToast('All players checked in.', 'success');
+      } catch (err) {
+        showToast(err.message, 'error');
+      }
+    });
+  }
+  
+  if (btnClear) {
+    btnClear.addEventListener('click', async () => {
+      try {
+        await fetchApi('/api/attendance/reset', { method: 'POST' });
+        warRoomAttendance.clear();
+        document.getElementById('war-online-count').textContent = '0';
+        renderWarRoomTable();
+        showToast('Check-ins cleared.', 'info');
+      } catch (err) {
+        showToast(err.message, 'error');
+      }
+    });
+  }
+  
+  if (btnCalc) {
+    btnCalc.addEventListener('click', async () => {
+      const scope = document.getElementById('war-scope').value;
+      const rallyCount = document.getElementById('war-rallies').value;
+      const generation = document.getElementById('war-generation').value;
+      // You could dynamically filter alliance tag if needed
+      const payload = {
+        event_scope: scope,
+        rally_count: parseInt(rallyCount, 10),
+        generation: parseInt(generation, 10),
+        online_only: true
+      };
+      btnCalc.textContent = 'Calculating...';
+      btnCalc.disabled = true;
+      try {
+        const res = await fetchApi('/api/rallies/calculate', {
+          method: 'POST',
+          body: JSON.stringify(payload)
+        });
+        renderWarResults(res.rallies || []);
+      } catch (err) {
+        showToast(err.message, 'error');
+      } finally {
+        btnCalc.textContent = 'Calculate Multi-Rally';
+        btnCalc.disabled = false;
+      }
+    });
+  }
+
+  // Sub-tabs for Database vs War Room
+  document.querySelectorAll('.sub-tab').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('.sub-tab').forEach(b => {
+        b.classList.remove('active');
+        b.style.background = 'transparent';
+        b.style.color = 'var(--text-secondary)';
+      });
+      btn.classList.add('active');
+      btn.style.background = 'var(--bg-card)';
+      btn.style.color = 'var(--text-primary)';
+      
+      document.querySelectorAll('.sub-pane').forEach(p => p.style.display = 'none');
+      const targetId = btn.getAttribute('data-sub');
+      const target = document.getElementById(targetId);
+      if (target) target.style.display = 'block';
+      
+      if (targetId === 'sub-war-room') {
+        loadWarRoom();
+      }
+    });
+  });
+}
+
+function renderWarResults(rallies) {
+  const container = document.getElementById('war-results-container');
+  if (!container) return;
+  container.innerHTML = '';
+  
+  if (rallies.length === 0) {
+    container.innerHTML = '<div class="glass-card"><p style="color:var(--text-muted);">No online players available to form rallies.</p></div>';
+    return;
+  }
+  
+  rallies.forEach(rally => {
+    const card = document.createElement('div');
+    card.className = 'glass-card';
+    card.style.borderTop = `3px solid ${rally.role === 'main_strike' ? 'var(--color-amber)' : rally.role === 'garrison_defense' ? 'var(--color-cyan)' : 'var(--color-rose)'}`;
+    
+    // Create header with Hero Recommendations
+    const p1 = rally.players[0];
+    const recCaptain = p1?.recommended_captain || '-';
+    const joiners = p1?.recommended_joiners?.join(', ') || '-';
+    
+    card.innerHTML = `
+      <h3 style="margin-bottom: 8px;">${rally.label}</h3>
+      <div style="display:flex; gap:16px; margin-bottom: 16px; font-size:13px;">
+        <div><span style="color:var(--text-muted);">Recommended Captain:</span> <strong>${recCaptain}</strong></div>
+        <div><span style="color:var(--text-muted);">Recommended Joiners:</span> <strong>${joiners}</strong></div>
+        <div><span style="color:var(--text-muted);">Ratio:</span> <strong>${rally.ratio.infantry}% / ${rally.ratio.lancer}% / ${rally.ratio.marksman}%</strong></div>
+      </div>
+      <div class="table-responsive">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>Player</th>
+              <th>Infantry</th>
+              <th>Lancers</th>
+              <th>Marksman</th>
+              <th>Total March</th>
+              <th>Notes</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${rally.players.map(p => `
+              <tr>
+                <td><strong>${escapeHtml(p.player_name)}</strong></td>
+                <td style="color: var(--troop-inf);">${p.infantry_count.toLocaleString()}</td>
+                <td style="color: var(--troop-lan);">${p.lancer_count.toLocaleString()}</td>
+                <td style="color: var(--troop-mrk);">${p.marksman_count.toLocaleString()}</td>
+                <td>${p.march_limit.toLocaleString()}</td>
+                <td>${p.tactical_note ? `<span style="color:var(--color-amber); font-size:12px;">${p.tactical_note}</span>` : ''}</td>
+              </tr>
+            `).join('')}
+          </tbody>
+        </table>
+      </div>
+    `;
+    container.appendChild(card);
+  });
+}
+// ==========================================
+
 // Start
 document.addEventListener('DOMContentLoaded', () => {
   initEventListeners();
+  setupWarRoomListeners();
   loadPresets();
   loadHeroes();
   checkAuth().then(() => {

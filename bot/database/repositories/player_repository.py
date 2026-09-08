@@ -194,6 +194,15 @@ class PlayerRepository:
         self.session.delete(player)
         self.session.flush()
 
+    def delete_all(self, guild_id: Optional[str] = None) -> int:
+        """Delete all players matching the guild_id (or all players if guild_id is '*' or None)."""
+        players = self.list_all(guild_id=guild_id)
+        count = len(players)
+        for p in players:
+            self.session.delete(p)
+        self.session.flush()
+        return count
+
     def reset_player(self, player: Player) -> None:
         """Wipe a player's registered troop data so they must
         re-register, without losing their row (kept distinct from

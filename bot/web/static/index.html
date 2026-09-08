@@ -285,6 +285,10 @@
           <div>
             <h2 class="pane-title">Player Roster</h2>
             <p class="pane-desc">Manage registered players, update march limits, and configure troop levels.</p>
+            <div class="sub-tabs" style="margin-top: 16px; display: flex; gap: 8px;">
+              <button class="sub-tab active" data-sub="sub-database" style="padding: 6px 16px; border-radius: var(--radius-sm); border: 1px solid var(--border-subtle); background: var(--bg-card); color: var(--text-primary); cursor: pointer;">Database</button>
+              <button class="sub-tab" data-sub="sub-war-room" style="padding: 6px 16px; border-radius: var(--radius-sm); border: 1px solid var(--border-subtle); background: transparent; color: var(--text-secondary); cursor: pointer;">⚔️ War Room</button>
+            </div>
           </div>
           <div class="header-actions">
             <button class="btn btn-secondary" id="btn-survey-generator" title="1-Click Google Survey Setup (Google Apps Script)">
@@ -311,9 +315,17 @@
                 <polyline points="17 8 12 3 7 8"/>
                 <line x1="12" y1="3" x2="12" y2="15"/>
               </svg>
-              Import CSV
+              Import CSV / Excel
             </button>
-            <input type="file" id="csv-file-input" accept=".csv,.tsv,.txt" style="display: none;">
+            <input type="file" id="csv-file-input" accept=".csv,.tsv,.txt,.xlsx,.xls" style="display: none;">
+            <button class="btn btn-danger-soft" id="btn-clear-roster" title="Clean all player data for this server">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <polyline points="3 6 5 6 21 6"/>
+                <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
+                <line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/>
+              </svg>
+              Clean Data
+            </button>
             <button class="btn btn-primary" id="btn-add-player">
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round">
                 <path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
@@ -325,9 +337,11 @@
           </div>
         </div>
 
-        <div class="table-toolbar">
+        <!-- SUB-PANE 1: DATABASE -->
+        <div id="sub-database" class="sub-pane active">
+          <div class="table-toolbar">
 
-          <div class="search-box">
+            <div class="search-box">
             <svg class="search-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
               <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
             </svg>
@@ -371,6 +385,69 @@
             </table>
           </div>
         </div>
+        </div><!-- end sub-database -->
+
+        <!-- SUB-PANE 2: WAR ROOM (Check-in & Multi-Rally) -->
+        <div id="sub-war-room" class="sub-pane" style="display: none;">
+          <div class="table-toolbar" style="justify-content: space-between; align-items: center; margin-top: 16px;">
+            <div style="display: flex; gap: 12px; align-items: center;">
+              <button class="btn btn-primary" id="btn-war-select-all">Select All</button>
+              <button class="btn btn-danger-soft" id="btn-war-clear">Clear Check-Ins</button>
+              <div class="stat-value" style="font-size: 14px; margin-left: 16px;">
+                Online: <span id="war-online-count" style="color: var(--color-cyan); font-weight: 700;">0</span>
+              </div>
+            </div>
+            <div style="display: flex; gap: 12px; align-items: center;">
+              <select class="form-input" id="war-generation" style="width: auto;">
+                <option value="1">Gen 1</option>
+                <option value="2">Gen 2</option>
+                <option value="3">Gen 3</option>
+                <option value="4">Gen 4</option>
+                <option value="5">Gen 5</option>
+                <option value="6">Gen 6</option>
+                <option value="7" selected>Gen 7+</option>
+              </select>
+              <select class="form-input" id="war-rallies" style="width: auto;">
+                <option value="1">1 Rally</option>
+                <option value="2">2 Rallies</option>
+                <option value="3" selected>3 Rallies</option>
+                <option value="4">4 Rallies</option>
+                <option value="5">5 Rallies</option>
+                <option value="6">6 Rallies</option>
+              </select>
+              <select class="form-input" id="war-scope" style="width: auto;">
+                <option value="state">State Level</option>
+                <option value="alliance">Alliance Only</option>
+              </select>
+              <button class="btn btn-success" id="btn-war-calculate" style="background: var(--color-emerald); color: #fff;">Calculate Multi-Rally</button>
+            </div>
+          </div>
+
+          <!-- Check-in Table -->
+          <div class="table-card" style="margin-bottom: 24px; max-height: 400px; overflow-y: auto;">
+            <table class="data-table" id="war-checkin-table">
+              <thead style="position: sticky; top: 0; background: var(--bg-card); z-index: 10;">
+                <tr>
+                  <th style="width: 50px; text-align: center;">✅</th>
+                  <th>Player Name</th>
+                  <th>Alliance</th>
+                  <th>Level / FC</th>
+                  <th>Helios</th>
+                  <th>March Limit</th>
+                </tr>
+              </thead>
+              <tbody id="war-checkin-table-body">
+                <tr><td colspan="6" class="empty-cell">Loading...</td></tr>
+              </tbody>
+            </table>
+          </div>
+
+          <!-- Results Section -->
+          <div id="war-results-container" style="display: flex; flex-direction: column; gap: 24px;">
+            <!-- Output injected here -->
+          </div>
+        </div><!-- end sub-war-room -->
+
       </section>
 
       <!-- TAB 3: FORMATION SIMULATOR -->
@@ -925,7 +1002,7 @@
             <div class="form-grid-2">
               <div class="form-group">
                 <label class="form-label">FC / Level *</label>
-                <input type="number" class="form-input" id="form-inf-level" required min="1" max="30" value="5">
+                <input type="number" class="form-input" id="form-inf-level" required min="1" max="40" value="5">
               </div>
               <div class="form-group" id="form-inf-qty-wrap">
                 <label class="form-label">Helios Quantity</label>
@@ -946,7 +1023,7 @@
             <div class="form-grid-2">
               <div class="form-group">
                 <label class="form-label">FC / Level *</label>
-                <input type="number" class="form-input" id="form-lan-level" required min="1" max="30" value="5">
+                <input type="number" class="form-input" id="form-lan-level" required min="1" max="40" value="5">
               </div>
               <div class="form-group" id="form-lan-qty-wrap">
                 <label class="form-label">Helios Quantity</label>
@@ -967,7 +1044,7 @@
             <div class="form-grid-2">
               <div class="form-group">
                 <label class="form-label">FC / Level *</label>
-                <input type="number" class="form-input" id="form-mrk-level" required min="1" max="30" value="5">
+                <input type="number" class="form-input" id="form-mrk-level" required min="1" max="40" value="5">
               </div>
               <div class="form-group" id="form-mrk-qty-wrap">
                 <label class="form-label">Helios Quantity</label>
@@ -1027,6 +1104,24 @@
       <div class="modal-footer">
         <button class="btn btn-secondary" id="delete-modal-cancel">Cancel</button>
         <button class="btn btn-danger" id="delete-modal-confirm">Delete Permanently</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL: CLEAR ALL DATA CONFIRMATION -->
+  <div class="modal-overlay" id="clear-data-modal">
+    <div class="modal-container small">
+      <div class="modal-header">
+        <h3 class="modal-title">Clean Server Data</h3>
+        <button class="modal-close" id="clear-data-modal-close">&times;</button>
+      </div>
+      <div class="modal-body">
+        <p>Are you sure you want to delete all player data for <strong id="clear-data-server-name">this server</strong>?</p>
+        <p class="text-danger mt-8 text-sm">⚠️ <strong>Warning:</strong> This will wipe all registered players, troops, and hero profiles from the roster. This action cannot be undone.</p>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" id="clear-data-modal-cancel">Cancel</button>
+        <button class="btn btn-danger" id="clear-data-modal-confirm">Yes, Wipe All Data</button>
       </div>
     </div>
   </div>

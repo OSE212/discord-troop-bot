@@ -23,12 +23,14 @@ def test_parse_number():
 
 
 def test_parse_level():
-    assert parse_level("FC 5") == 5
-    assert parse_level("fc3") == 3
-    assert parse_level("Level 8") == 8
-    assert parse_level("lvl 10") == 10
-    assert parse_level("T11") == 11
+    assert parse_level("FC 5") == 35
+    assert parse_level("fc3") == 33
+    assert parse_level("8") == 38
+    assert parse_level("1") == 31
+    assert parse_level("Level 28") == 28
+    assert parse_level("F28") == 28
     assert parse_level("30") == 30
+    assert parse_level("FC 30") == 30
     assert parse_level("-") is None
     assert parse_level("") is None
 
@@ -171,4 +173,88 @@ def test_csv_importer_google_forms_export(session):
     assert p2.name == "CommanderLuke"
     assert p2.march_limit == 150_000
     assert p2.profile_for(TroopType.INFANTRY).level == 25
+
+
+def test_import_macintosh_carriage_returns_and_semicolons(session):
+    importer = CsvImporter(session)
+    # File with bare \r (classic Macintosh / Excel Mac) and semicolons (point-virgule)
+    mac_csv = (
+        "In-Game Name;Game ID;March Limit;Discord Username;Infantry FC;Infantry Helios;Lancers FC;Lancers Helios;Marksman FC;Marksman Helios\r"
+        "MacPlayer1;2001;190000;mac_user1;8;No;8;Yes;8;No\r"
+        "MacPlayer2;2002;150000;mac_user2;7;Yes;6;No;7;No\r"
+    )
+    res = importer.import_text(mac_csv)
+    assert res.total_rows == 2
+    assert res.created == 2
+    assert res.skipped == 0
+    assert len(res.errors) == 0
+
+    p1 = importer.repo.get_by_game_player_id("2001")
+    assert p1 is not None
+    assert p1.name == "MacPlayer1"
+    # FC8 maps to 38
+    assert p1.profile_for(TroopType.INFANTRY).level == 38
+
+
+def test_import_utf16_le_and_excel_sep_directive(session):
+    importer = CsvImporter(session)
+    # TSV encoded in UTF-16 with BOM and sep=\t directive
+    text_content = "sep=\t\nName\tGame ID\tMarch Limit\tInfantry FC\nUtf16Player\t3001\t180000\t8\n"
+    raw_bytes = text_content.encode("utf-16")
+
+    res = importer.import_file_bytes(raw_bytes, filename="roster.txt")
+    assert res.total_rows == 1
+    assert res.created == 1
+    p = importer.repo.get_by_game_player_id("3001")
+    assert p is not None
+    assert p.name == "Utf16Player"
+
+
+def test_import_cp1252_european_characters(session):
+    importer = CsvImporter(session)
+    # European Excel CSV in CP1252 with accented letters and semicolons
+    text_content = (
+        "Nom du joueur;ID Joueur;Capacité de marche;Discord;FC Infanterie\n"
+        "Hélène;4001;170000;helene_fr;FC 8\n"
+    )
+    # Map synonyms if needed or standard headers
+    text_content = (
+        "In-Game Name;Game ID;March Limit;Discord;Infantry FC\n"
+        "Hélène;4001;170000;helene_fr;8\n"
+    )
+    raw_bytes = text_content.encode("cp1252")
+
+    res = importer.import_file_bytes(raw_bytes, filename="export_excel_fr.csv")
+    assert res.total_rows == 1
+    assert res.created == 1
+    p = importer.repo.get_by_game_player_id("4001")
+    assert p is not None
+    assert p.name == "Hélène"
+
+
+def test_import_excel_xlsx(session):
+    import io
+    import openpyxl
+    wb = openpyxl.Workbook()
+    ws = wb.active
+    ws.append(["In-Game Name", "Game ID", "March Limit", "Infantry FC", "Infantry Helios", "Lancers FC", "Marksman FC"])
+    ws.append(["ExcelWarrior", "5001", 195000, 8, "Yes", 7, 8])
+    buf = io.BytesIO()
+    wb.save(buf)
+    raw_xlsx = buf.getvalue()
+
+    importer = CsvImporter(session)
+    res = importer.import_file_bytes(raw_xlsx, filename="players.xlsx")
+    assert res.total_rows == 1
+    assert res.created == 1
+    assert res.skipped == 0
+
+    p = importer.repo.get_by_game_player_id("5001")
+    assert p is not None
+    assert p.name == "ExcelWarrior"
+    assert p.march_limit == 195000
+    assert p.profile_for(TroopType.INFANTRY).level == 38
+    assert p.profile_for(TroopType.INFANTRY).helios is True
+    assert p.profile_for(TroopType.LANCERS).level == 37
+
 

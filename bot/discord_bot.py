@@ -6,7 +6,7 @@ import discord
 from discord.ext import commands
 
 from bot.database.base import Database
-from bot.discord.commands import admin, calculation, registration
+from bot.discord.commands import admin, calculation, registration, poll
 from bot.rules.configuration import RankingConfig, load_config
 from bot.settings import Settings
 
@@ -31,6 +31,7 @@ class TroopBot(commands.Bot):
         await registration.setup(self, self.db)
         await admin.setup(self, self.db)
         await calculation.setup(self, self.db, self.config)
+        await poll.setup(self, self.db)
 
         synced = await self.tree.sync()
         logger.info("Synced %d application commands.", len(synced))

@@ -212,3 +212,52 @@ DefenderTwo,GL02,150k,28,27,27
             await client.close()
 
     asyncio.run(_test())
+
+
+def test_multipart_file_upload_xlsx_and_macintosh_csv(tmp_path):
+    import io
+    import openpyxl
+    from aiohttp import FormData
+
+    async def _test():
+        app, settings = create_test_app_and_settings(tmp_path)
+        server = TestServer(app)
+        client = TestClient(server)
+        await client.start_server()
+
+        try:
+            # Login
+            await client.post("/api/auth/login", json={"passkey": "secretpass123"})
+
+            # 1. Test Macintosh CSV upload via multipart FormData
+            mac_csv_bytes = (
+                "In-Game Name;Game ID;March Limit;Infantry FC;Lancers FC;Marksman FC\r"
+                "MacHero;7001;175000;8;8;8\r"
+            ).encode("utf-8")
+
+            form_mac = FormData()
+            form_mac.add_field("file", mac_csv_bytes, filename="players_mac.csv", content_type="text/csv")
+            resp = await client.post("/api/players/import", data=form_mac)
+            assert resp.status == 200
+            res_data = await resp.json()
+            assert res_data["created"] == 1
+
+            # 2. Test Excel .xlsx upload via multipart FormData
+            wb = openpyxl.Workbook()
+            ws = wb.active
+            ws.append(["In-Game Name", "Game ID", "March Limit", "Infantry FC"])
+            ws.append(["ExcelKing", "7002", 200000, 8])
+            buf = io.BytesIO()
+            wb.save(buf)
+
+            form_xlsx = FormData()
+            form_xlsx.add_field("file", buf.getvalue(), filename="roster.xlsx", content_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
+            resp_xlsx = await client.post("/api/players/import", data=form_xlsx)
+            assert resp_xlsx.status == 200
+            res_xlsx = await resp_xlsx.json()
+            assert res_xlsx["created"] == 1
+        finally:
+            await client.close()
+
+    asyncio.run(_test())
+

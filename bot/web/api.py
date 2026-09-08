@@ -772,12 +772,44 @@ async def handle_delete_player(request: web.Request) -> web.Response:
     return web.json_response({"success": True})
 
 
+async def handle_clear_players(request: web.Request) -> web.Response:
+    user = get_current_user(request)
+    if not user:
+        return web.json_response({"error": "Unauthorized"}, status=401)
+
+    target_guild = get_target_guild_id(request, user)
+    if target_guild is None and user.get("role") != "owner":
+        return web.json_response({"error": "You do not have access to this server."}, status=403)
+
+    db = request.app["db"]
+    try:
+        with db.session() as session:
+            repo = PlayerRepository(session)
+            deleted_count = repo.delete_all(guild_id=target_guild)
+            return web.json_response({
+                "success": True,
+                "deleted_count": deleted_count,
+                "guild_id": target_guild,
+            })
+    except Exception as exc:
+        logger.exception("Error clearing player data")
+        return web.json_response({"error": str(exc)}, status=500)
+
+
 async def handle_import_players_csv(request: web.Request) -> web.Response:
     user = get_current_user(request)
     if not user:
         return web.json_response({"error": "Unauthorized"}, status=401)
 
-    csv_text = ""
+    target_guild = get_target_guild_id(request, user)
+    if target_guild is None and user.get("role") != "owner":
+        return web.json_response({"error": "You do not have access to this server."}, status=403)
+    guild_to_set = target_guild if target_guild and target_guild != "*" else None
+
+    raw_bytes: bytes = b""
+    filename: str = ""
+    json_csv_text: str = ""
+
     content_type = request.content_type.lower()
     if "multipart/form-data" in content_type:
         reader = await request.multipart()
@@ -786,41 +818,32 @@ async def handle_import_players_csv(request: web.Request) -> web.Response:
             if field is None:
                 break
             if field.name in ("file", "csv", "csv_file"):
-                data = await field.read()
-                try:
-                    csv_text = data.decode("utf-8-sig")
-                except UnicodeDecodeError:
-                    csv_text = data.decode("latin-1", errors="replace")
+                filename = field.filename or ""
+                raw_bytes = await field.read()
                 break
     elif "application/json" in content_type:
         try:
             body = await request.json()
-            csv_text = body.get("csv_text", "")
+            json_csv_text = str(body.get("csv_text", "")).strip()
         except Exception:
             return web.json_response({"error": "Invalid JSON body"}, status=400)
     else:
-        raw_data = await request.read()
-        try:
-            csv_text = raw_data.decode("utf-8-sig")
-        except UnicodeDecodeError:
-            csv_text = raw_data.decode("latin-1", errors="replace")
+        raw_bytes = await request.read()
 
-    if not csv_text.strip():
-        return web.json_response({"error": "No CSV content provided."}, status=400)
-
-    target_guild = get_target_guild_id(request, user)
-    if target_guild is None and user.get("role") != "owner":
-        return web.json_response({"error": "You do not have access to this server."}, status=403)
-    guild_to_set = target_guild if target_guild and target_guild != "*" else None
+    if not raw_bytes and not json_csv_text:
+        return web.json_response({"error": "No file or CSV content provided."}, status=400)
 
     db = request.app["db"]
     try:
         with db.session() as session:
             importer = CsvImporter(session)
-            result = importer.import_text(csv_text, guild_id=guild_to_set)
+            if raw_bytes:
+                result = importer.import_file_bytes(raw_bytes, filename=filename, guild_id=guild_to_set)
+            else:
+                result = importer.import_text(json_csv_text, guild_id=guild_to_set)
             return web.json_response(result.to_dict())
     except Exception as exc:
-        logger.exception("Error during CSV import")
+        logger.exception("Error during roster file import")
         return web.json_response({"error": str(exc)}, status=500)
 
 
@@ -1133,3 +1156,149 @@ async def handle_update_rules(request: web.Request) -> web.Response:
         return web.json_response({"success": True, "config": data})
     except Exception as exc:
         return web.json_response({"error": f"Failed to save rules: {exc}"}, status=500)
+
+
+# --- War Room / Attendance Endpoints ---
+
+async def handle_get_attendance(request: web.Request) -> web.Response:
+    """Returns the set of currently checked-in player IDs."""
+    user = get_current_user(request)
+    if not user:
+        return web.json_response({"error": "Unauthorized"}, status=401)
+    attendance_set = request.app.get("attendance", set())
+    return web.json_response({
+        "status": "success",
+        "checked_in_ids": list(attendance_set),
+        "total_online": len(attendance_set)
+    })
+
+async def handle_attendance_check_in(request: web.Request) -> web.Response:
+    """Toggles online check-in status for specific players."""
+    user = get_current_user(request)
+    if not user:
+        return web.json_response({"error": "Unauthorized"}, status=401)
+    
+    try:
+        data = await request.json()
+        player_ids = set(data.get("player_ids", []))
+        is_online = bool(data.get("is_online", True))
+    except Exception:
+        return web.json_response({"error": "Invalid JSON"}, status=400)
+    
+    if "attendance" not in request.app:
+        request.app["attendance"] = set()
+        
+    if is_online:
+        request.app["attendance"].update(player_ids)
+    else:
+        request.app["attendance"].difference_update(player_ids)
+        
+    return web.json_response({
+        "status": "success",
+        "total_online": len(request.app["attendance"])
+    })
+
+async def handle_attendance_select_all(request: web.Request) -> web.Response:
+    """Selects all given players as online."""
+    user = get_current_user(request)
+    if not user:
+        return web.json_response({"error": "Unauthorized"}, status=401)
+    
+    try:
+        data = await request.json()
+        all_ids = set(data.get("player_ids", []))
+    except Exception:
+        return web.json_response({"error": "Invalid JSON"}, status=400)
+        
+    request.app["attendance"] = all_ids
+    return web.json_response({
+        "status": "success", 
+        "total_online": len(request.app["attendance"])
+    })
+
+async def handle_attendance_reset(request: web.Request) -> web.Response:
+    """Clears all online check-ins."""
+    user = get_current_user(request)
+    if not user:
+        return web.json_response({"error": "Unauthorized"}, status=401)
+        
+    request.app["attendance"] = set()
+    return web.json_response({
+        "status": "success",
+        "total_online": 0
+    })
+
+async def handle_calculate_rallies(request: web.Request) -> web.Response:
+    """Executes multi-rally calculations dynamically filtering for online players."""
+    user = get_current_user(request)
+    if not user:
+        return web.json_response({"error": "Unauthorized"}, status=401)
+        
+    try:
+        data = await request.json()
+        event_scope_str = data.get("event_scope", "state")
+        alliance_tag = data.get("alliance_tag")
+        rally_count = int(data.get("rally_count", 3))
+        generation = int(data.get("generation", 1))
+        online_only = bool(data.get("online_only", True))
+    except Exception:
+        return web.json_response({"error": "Invalid JSON payload"}, status=400)
+        
+    from bot.recommendations.schemas import EventScope
+    from bot.recommendations.assignment_engine import MultiRallyAssignmentEngine
+    
+    try:
+        scope = EventScope(event_scope_str)
+    except ValueError:
+        return web.json_response({"error": f"Invalid event scope: {event_scope_str}"}, status=400)
+        
+    target_guild = get_target_guild_id(request, user)
+    
+    with request.app["db"].session() as session:
+        repo = PlayerRepository(session)
+        if target_guild:
+            players_db = repo.get_all_by_guild(target_guild)
+        else:
+            players_db = repo.get_all()
+            
+    # Serialize players for engine
+    pool = []
+    for p in players_db:
+        player_dict = {
+            "id": p.id,
+            "name": p.in_game_name,
+            "alliance_tag": p.alliance_tag,
+            "march_limit": p.march_limit,
+            "troops": {}
+        }
+        for troop in p.troops:
+            player_dict["troops"][troop.troop_type.value] = {
+                "level": troop.level,
+                "helios": troop.is_helios
+            }
+        pool.append(player_dict)
+        
+    attendance_set = request.app.get("attendance", set())
+    
+    results = MultiRallyAssignmentEngine.process_assignments(
+        players=pool,
+        rally_count=rally_count,
+        generation=generation,
+        scope=scope,
+        alliance_tag=alliance_tag,
+        online_only=online_only,
+        attendance=attendance_set
+    )
+    
+    # Optionally post to Discord channel if requested by user logic
+    post_to_discord = bool(data.get("post_to_discord", False))
+    if post_to_discord and target_guild and request.app.get("bot"):
+        bot = request.app["bot"]
+        # In a real implementation we'd let them pick a channel, but for now just returning to web UI
+        pass
+    
+    return web.json_response({
+        "status": "success",
+        "rallies": [r.to_dict() for r in results]
+    })
+

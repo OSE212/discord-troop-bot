@@ -412,6 +412,19 @@ body {
   background: #DC2626;
 }
 
+.btn-danger-soft {
+  background: rgba(244, 63, 94, 0.12);
+  color: #fb7185;
+  border: 1px solid rgba(244, 63, 94, 0.28);
+}
+
+.btn-danger-soft:hover {
+  background: rgba(244, 63, 94, 0.25);
+  color: #ffffff;
+  border-color: rgba(244, 63, 94, 0.5);
+  box-shadow: 0 0 12px rgba(244, 63, 94, 0.3);
+}
+
 .btn-discord {
   background: #5865F2;
   color: #FFFFFF;
@@ -2705,3 +2718,43 @@ body {
     padding: 8px 10px;
   }
 }
+
+/* ============================================================
+   WAR ROOM & SUB-TABS
+   ============================================================ */
+.sub-tabs {
+  margin-top: 16px;
+  display: flex;
+  gap: 8px;
+}
+.sub-tab {
+  padding: 6px 16px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border-subtle);
+  background: transparent;
+  color: var(--text-secondary);
+  cursor: pointer;
+  font-weight: 500;
+  transition: all 0.2s ease;
+}
+.sub-tab:hover {
+  background: rgba(255,255,255,0.05);
+}
+.sub-tab.active {
+  background: var(--bg-card);
+  color: var(--text-primary);
+  border-color: var(--border-subtle);
+  box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+}
+.sub-pane {
+  display: none;
+}
+.sub-pane.active {
+  display: block;
+}
+.war-check {
+  width: 18px;
+  height: 18px;
+  cursor: pointer;
+}
+
