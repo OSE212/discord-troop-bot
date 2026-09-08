@@ -43,11 +43,19 @@ class Database:
         try:
             from sqlalchemy import text
             with self.engine.connect() as conn:
-                conn.execute(text("ALTER TABLE players ADD COLUMN guild_id VARCHAR(32)"))
-                conn.commit()
+                try:
+                    conn.execute(text("ALTER TABLE players ADD COLUMN guild_id VARCHAR(32)"))
+                    conn.commit()
+                except Exception:
+                    pass
+                try:
+                    conn.execute(text("ALTER TABLE players ADD COLUMN alliance_tag VARCHAR(32)"))
+                    conn.commit()
+                except Exception:
+                    pass
         except Exception:
-            # Column already exists or table freshly created with it
             pass
+
 
 
     @contextmanager
