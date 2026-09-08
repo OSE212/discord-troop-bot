@@ -36,10 +36,65 @@ def _normalize_header(header: str) -> str:
     return " ".join(cleaned.split())
 
 
+def decode_text_bytes(data: bytes) -> str:
+    """Decode raw bytes into a string trying multiple encodings:
+    - UTF-16 LE/BE (with BOM or heuristic null-byte check)
+    - UTF-8 (with BOM or standard)
+    - Windows-1252 / CP1252 (Western European, French/German/Spanish Excel)
+    - MacRoman (classic Macintosh CSV export)
+    - ISO-8859-1 / Latin-1 (lossless fallback)
+    """
+    if not data:
+        return ""
+
+    # Check for UTF-16 BOM
+    if data.startswith((b"\xff\xfe", b"\xfe\xff")):
+        try:
+            return data.decode("utf-16")
+        except UnicodeDecodeError:
+            pass
+
+    # Detect UTF-16 without BOM (alternating null bytes in ASCII text)
+    if len(data) >= 4:
+        sample = data[:min(len(data), 200)]
+        if len(sample) >= 4 and (
+            sample[1::2].count(b"\x00") > len(sample) // 4
+            or sample[0::2].count(b"\x00") > len(sample) // 4
+        ):
+            try:
+                return data.decode("utf-16")
+            except UnicodeDecodeError:
+                pass
+
+    # Try UTF-8 with BOM support
+    try:
+        return data.decode("utf-8-sig")
+    except UnicodeDecodeError:
+        pass
+
+    # Try CP1252 (Windows ANSI / Western European - covers French, German, Spanish, etc.)
+    try:
+        return data.decode("cp1252")
+    except UnicodeDecodeError:
+        pass
+
+    # Try MacRoman (classic Macintosh)
+    try:
+        return data.decode("mac_roman")
+    except UnicodeDecodeError:
+        pass
+
+    # Fallback Latin-1
+    return data.decode("latin-1", errors="replace")
+
+
 def parse_number(val: Any) -> Optional[int]:
-    """Parse integers supporting suffixes (k, m) and separators (comma, dot)."""
+    """Parse integers supporting suffixes (k, m), separators (comma, dot), and numeric types."""
     if val is None:
         return None
+    if isinstance(val, (int, float)):
+        return int(round(val))
+
     s = str(val).strip()
     if not s or s == "-":
         return None
@@ -55,18 +110,13 @@ def parse_number(val: Any) -> Optional[int]:
 
     # Handle European vs US separators
     if "," in s and "." in s:
-        # Check which comes last
         if s.rfind(".") > s.rfind(","):
-            # 1,250.50
             s = s.replace(",", "")
         else:
-            # 1.250,50
             s = s.replace(".", "").replace(",", ".")
     elif "," in s:
-        # e.g. 165,000
         s = s.replace(",", "")
     elif "." in s:
-        # If dot is followed by exactly 3 digits and no other dot, likely thousands separator: 165.000
         parts = s.split(".")
         if len(parts) == 2 and len(parts[1]) == 3 and multiplier == 1:
             s = "".join(parts)
@@ -80,12 +130,20 @@ def parse_number(val: Any) -> Optional[int]:
 
 def parse_level(val: Any) -> Optional[int]:
     """Extract numeric FC / troop level.
-    Levels 1-30 are F1-F30 (Level 1 to Level 30).
-    FC1-FC10 map to 31-40.
-    Supports strings like 'FC 5', 'fc3', 'Level 28', 'F28', 'T10', '28'.
+    Levels 1-30 are F1-F30 (Furnace 1 to 30).
+    FC1-FC10 map to 31-40 (Fire Crystal 1 to 10).
+    Progression: F28 (28) < F29 (29) < F30 (30) < FC1 (31) < FC2 (32) < ... < FC8 (38).
+    Supports 'FC 5', 'fc3', '8' (FC8), '28' (F28), 'Level 28', 'F28', 'T10', and direct numbers.
     """
     if val is None:
         return None
+
+    if isinstance(val, (int, float)):
+        num = int(round(val))
+        if 1 <= num <= 10:
+            return 30 + num
+        return num
+
     s = str(val).strip()
     if not s or s == "-":
         return None
@@ -95,16 +153,21 @@ def parse_level(val: Any) -> Optional[int]:
     if fc_match:
         try:
             fc_num = int(fc_match.group(1))
-            return 30 + fc_num
+            # FC 1-10 -> 31-40. If someone wrote FC 28 or FC 30, it refers to Furnace 28 or 30
+            if fc_num <= 10:
+                return 30 + fc_num
+            return fc_num
         except ValueError:
             return None
 
-    # Standard level / F prefix / plain number
-    match = re.search(r"(?:level|lvl|tier|t|f)?\s*(\d+)", s, re.IGNORECASE)
+    # Standard level / F prefix / plain number (also handles '8.0' from Excel floats)
+    match = re.search(r"(?:level|lvl|tier|t|f)?\s*(\d+)(?:\.0+)?", s, re.IGNORECASE)
     if match:
         try:
             num = int(match.group(1))
-            # If someone wrote FC as plain number like 31-40, keep as is
+            # 1 to 10 in FC survey columns represents FC1 to FC10 (31 to 40)
+            if 1 <= num <= 10:
+                return 30 + num
             return num
         except ValueError:
             return None
@@ -303,16 +366,26 @@ class CsvImporter:
 
     @staticmethod
     def detect_delimiter(text: str) -> str:
-        """Detect whether text is comma, tab, or semicolon separated."""
-        lines = [line.strip() for line in text.splitlines() if line.strip()]
+        """Detect whether text is comma, tab, or semicolon separated.
+        Supports Excel directives like 'sep=;' on the first line.
+        """
+        clean_text = text.replace("\r\n", "\n").replace("\r", "\n")
+        lines = [line.strip() for line in clean_text.splitlines() if line.strip()]
         if not lines:
             return ","
+
+        # Check for explicit sep= directive from Excel
         first_line = lines[0]
+        if first_line.lower().startswith("sep=") and len(first_line) >= 5:
+            return first_line[4:5]
+
+        # Use header line for counting
+        header_candidate = lines[1] if first_line.lower().startswith("sep=") and len(lines) > 1 else first_line
         counts = {
-            ",": first_line.count(","),
-            ";": first_line.count(";"),
-            "\t": first_line.count("\t"),
-            "|": first_line.count("|"),
+            ";": header_candidate.count(";"),
+            ",": header_candidate.count(","),
+            "\t": header_candidate.count("\t"),
+            "|": header_candidate.count("|"),
         }
         best = max(counts, key=counts.get)  # type: ignore
         return best if counts[best] > 0 else ","
@@ -322,30 +395,158 @@ class CsvImporter:
         """Map canonical field names to column indexes."""
         column_map: dict[str, int] = {}
         for idx, col in enumerate(header_row):
-            norm = _normalize_header(col)
+            norm = _normalize_header(str(col))
             for canon_key, synonyms in HEADER_SYNONYMS.items():
                 if canon_key not in column_map and norm in synonyms:
                     column_map[canon_key] = idx
                     break
         return column_map
 
+    @staticmethod
+    def _read_xlsx_bytes(data: bytes) -> list[list[str]]:
+        """Extract all non-empty rows from an Excel (.xlsx) file."""
+        try:
+            import openpyxl
+            wb = openpyxl.load_workbook(io.BytesIO(data), data_only=True)
+            sheet = wb.active
+            rows: list[list[str]] = []
+            for row in sheet.iter_rows(values_only=True):
+                row_strs = []
+                for c in row:
+                    if c is None:
+                        row_strs.append("")
+                    elif isinstance(c, float) and c.is_integer():
+                        row_strs.append(str(int(c)))
+                    else:
+                        row_strs.append(str(c).strip())
+                if any(cell for cell in row_strs):
+                    rows.append(row_strs)
+            return rows
+        except ImportError:
+            # Fallback zero-dependency XML parsing if openpyxl is not installed
+            import zipfile
+            import xml.etree.ElementTree as ET
+            with zipfile.ZipFile(io.BytesIO(data)) as zf:
+                shared_strings = []
+                if "xl/sharedStrings.xml" in zf.namelist():
+                    tree = ET.fromstring(zf.read("xl/sharedStrings.xml"))
+                    for si in tree.iter("{http://schemas.openxmlformats.org/spreadsheetml/2006/main}si"):
+                        t = si.find("{http://schemas.openxmlformats.org/spreadsheetml/2006/main}t")
+                        shared_strings.append(t.text if t is not None and t.text else "")
+                sheet_name = "xl/worksheets/sheet1.xml"
+                tree = ET.fromstring(zf.read(sheet_name))
+                rows = []
+                for row_elem in tree.iter("{http://schemas.openxmlformats.org/spreadsheetml/2006/main}row"):
+                    row_data = []
+                    for c_elem in row_elem.iter("{http://schemas.openxmlformats.org/spreadsheetml/2006/main}c"):
+                        t_attr = c_elem.get("t")
+                        v_elem = c_elem.find("{http://schemas.openxmlformats.org/spreadsheetml/2006/main}v")
+                        val = v_elem.text if v_elem is not None and v_elem.text else ""
+                        if t_attr == "s" and val.isdigit():
+                            val = shared_strings[int(val)] if int(val) < len(shared_strings) else val
+                        row_data.append(val.strip())
+                    if any(c for c in row_data):
+                        rows.append(row_data)
+                return rows
+
+    @staticmethod
+    def _read_xls_bytes(data: bytes) -> list[list[str]]:
+        """Extract all non-empty rows from a legacy Excel (.xls) file using xlrd."""
+        import xlrd
+        book = xlrd.open_workbook(file_contents=data)
+        sheet = book.sheet_by_index(0)
+        rows: list[list[str]] = []
+        for r in range(sheet.nrows):
+            row_vals = []
+            for c in range(sheet.ncols):
+                val = sheet.cell_value(r, c)
+                if isinstance(val, float) and val.is_integer():
+                    row_vals.append(str(int(val)))
+                else:
+                    row_vals.append(str(val).strip() if val != "" else "")
+            if any(cell for cell in row_vals):
+                rows.append(row_vals)
+        return rows
+
+    def import_file_bytes(
+        self,
+        data: bytes,
+        filename: str = "",
+        guild_id: Optional[str] = None,
+    ) -> ImportResult:
+        """Parse raw file bytes supporting .xlsx, .xls, and arbitrary text/csv encodings."""
+        if not data:
+            res = ImportResult()
+            res.errors.append("File is empty.")
+            return res
+
+        fn = filename.lower().strip()
+
+        # Modern Excel .xlsx (ZIP format starting with PK)
+        if data.startswith(b"PK\x03\x04") or fn.endswith(".xlsx"):
+            try:
+                rows = self._read_xlsx_bytes(data)
+                return self.import_rows(rows, guild_id=guild_id)
+            except Exception as e:
+                res = ImportResult()
+                res.errors.append(f"Failed to read Excel (.xlsx) file: {e}")
+                return res
+
+        # Legacy Excel .xls (OLE Compound Document signature)
+        if data.startswith(b"\xd0\xcf\x11\xe0\xa1\xb1\x1a\xe1") or fn.endswith(".xls"):
+            try:
+                rows = self._read_xls_bytes(data)
+                return self.import_rows(rows, guild_id=guild_id)
+            except Exception as e:
+                res = ImportResult()
+                res.errors.append(f"Failed to read Excel (.xls) file: {e}")
+                return res
+
+        # Plain text: CSV, TSV, Macintosh, UTF-8, UTF-16, CP1252, etc.
+        text = decode_text_bytes(data)
+        return self.import_text(text, guild_id=guild_id)
+
     def import_text(self, text: str, guild_id: Optional[str] = None) -> ImportResult:
         result = ImportResult()
 
+        if not text or not text.strip():
+            result.errors.append("File is empty.")
+            return result
 
         # Remove BOM if present
         if text.startswith("\ufeff"):
             text = text[1:]
 
-        delimiter = self.detect_delimiter(text)
-        reader = csv.reader(io.StringIO(text), delimiter=delimiter)
+        # Normalize line endings to avoid 'new-line character seen in unquoted field' error
+        text = text.replace("\r\n", "\n").replace("\r", "\n")
 
+        lines = [line for line in text.split("\n") if line.strip()]
+        if not lines:
+            result.errors.append("File is empty.")
+            return result
+
+        delimiter = self.detect_delimiter(text)
+
+        # If first line was sep= directive, remove it before CSV parsing
+        if lines[0].strip().lower().startswith("sep="):
+            text = "\n".join(lines[1:])
+
+        reader = csv.reader(io.StringIO(text, newline=""), delimiter=delimiter)
         rows = list(reader)
+        return self.import_rows(rows, guild_id=guild_id)
+
+    def import_rows(
+        self,
+        rows: list[list[Any]],
+        guild_id: Optional[str] = None,
+    ) -> ImportResult:
+        result = ImportResult()
+
         if not rows:
             result.errors.append("File is empty.")
             return result
 
-        header_row = rows[0]
+        header_row = [str(c).strip() for c in rows[0]]
         col_map = self.map_columns(header_row)
 
         if "name" not in col_map:

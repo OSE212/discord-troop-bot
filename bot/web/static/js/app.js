@@ -82,6 +82,12 @@ const elements = {
   csvFileInput: document.getElementById('csv-file-input'),
   btnQuickAddPlayer: document.getElementById('btn-quick-add-player'),
   btnQuickCalculate: document.getElementById('btn-quick-calculate'),
+  btnClearRoster: document.getElementById('btn-clear-roster'),
+  clearDataModal: document.getElementById('clear-data-modal'),
+  clearDataModalClose: document.getElementById('clear-data-modal-close'),
+  clearDataModalCancel: document.getElementById('clear-data-modal-cancel'),
+  clearDataModalConfirm: document.getElementById('clear-data-modal-confirm'),
+  clearDataServerName: document.getElementById('clear-data-server-name'),
   // Survey Modal
   surveyModal: document.getElementById('survey-modal'),
   surveyModalClose: document.getElementById('survey-modal-close'),
@@ -1389,6 +1395,56 @@ function initEventListeners() {
       showToast(err.message, 'error');
     }
   });
+
+  // Clear All Player Data
+  if (elements.btnClearRoster) {
+    elements.btnClearRoster.addEventListener('click', () => {
+      // Show current server name in the modal
+      const serverName = elements.serverSelect
+        ? (elements.serverSelect.options[elements.serverSelect.selectedIndex]?.text || 'this server')
+        : 'this server';
+      if (elements.clearDataServerName) {
+        elements.clearDataServerName.textContent = serverName;
+      }
+      if (elements.clearDataModal) {
+        elements.clearDataModal.classList.add('active');
+      }
+    });
+  }
+
+  function closeClearDataModal() {
+    if (elements.clearDataModal) elements.clearDataModal.classList.remove('active');
+  }
+
+  if (elements.clearDataModalClose) {
+    elements.clearDataModalClose.addEventListener('click', closeClearDataModal);
+  }
+  if (elements.clearDataModalCancel) {
+    elements.clearDataModalCancel.addEventListener('click', closeClearDataModal);
+  }
+  if (elements.clearDataModal) {
+    elements.clearDataModal.addEventListener('click', (e) => {
+      if (e.target === elements.clearDataModal) closeClearDataModal();
+    });
+  }
+  if (elements.clearDataModalConfirm) {
+    elements.clearDataModalConfirm.addEventListener('click', async () => {
+      try {
+        elements.clearDataModalConfirm.disabled = true;
+        elements.clearDataModalConfirm.textContent = 'Wiping...';
+        const data = await fetchApi('/api/players/clear', { method: 'DELETE' });
+        showToast(`Cleared ${data.deleted_count ?? 'all'} player records from the roster.`, 'info');
+        closeClearDataModal();
+        loadPlayers();
+        loadStats();
+      } catch (err) {
+        showToast(err.message, 'error');
+      } finally {
+        elements.clearDataModalConfirm.disabled = false;
+        elements.clearDataModalConfirm.textContent = 'Yes, Wipe All Data';
+      }
+    });
+  }
 
   // Simulator Sliders & Inputs
   elements.sliderInf.addEventListener('input', (e) => syncRatio('inf', e.target.value));
