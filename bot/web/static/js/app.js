@@ -532,11 +532,19 @@ async function loadPlayers() {
     const q = encodeURIComponent(state.searchQuery);
     const filter = encodeURIComponent(state.activeFilter);
     const tag = encodeURIComponent(state.activeAllianceTag);
-    const players = await fetchApi(`/api/players?q=${q}&filter=${filter}&alliance_tag=${tag}`);
+    const [players, attRes] = await Promise.all([
+      fetchApi(`/api/players?q=${q}&filter=${filter}&alliance_tag=${tag}`),
+      fetchApi('/api/attendance')
+    ]);
     state.players = players;
+    window.warRoomAttendance = new Set(attRes.checked_in_ids || []);
+    
+    const countEl = document.getElementById('war-online-count');
+    if (countEl) countEl.textContent = window.warRoomAttendance.size;
+    
     renderRoster();
   } catch (err) {
-    elements.rosterTableBody.innerHTML = `<tr><td colspan="8" class="empty-cell text-danger">Failed to load players: ${err.message}</td></tr>`;
+    elements.rosterTableBody.innerHTML = `<tr><td colspan="9" class="empty-cell text-danger">Failed to load players: ${err.message}</td></tr>`;
   }
 }
 
@@ -552,6 +560,7 @@ function renderRoster() {
     const inf = p.troops.infantry;
     const lan = p.troops.lancers;
     const mrk = p.troops.marksman;
+    const isChecked = window.warRoomAttendance ? window.warRoomAttendance.has(p.id) : false;
 
     const renderTroopPill = (t) => {
       if (t.level === null) return '<span class="text-muted">-</span>';
@@ -559,7 +568,6 @@ function renderRoster() {
       const qtyStr = isHelios && t.helios_quantity !== null ? ` (${formatNumber(t.helios_quantity)})` : '';
       return `<span class="pill-level ${isHelios ? 'helios' : ''}">${isHelios ? '🔥 ' : ''}${formatFcLevel(t.level)}${qtyStr}</span>`;
     };
-
 
     const statusBadge = p.is_complete
       ? '<span class="status-badge complete">Complete</span>'
@@ -569,6 +577,9 @@ function renderRoster() {
 
     return `
       <tr data-id="${p.id}">
+        <td style="text-align: center;">
+          <input type="checkbox" class="roster-check" data-id="${p.id}" ${isChecked ? 'checked' : ''} style="width: 18px; height: 18px; cursor: pointer;">
+        </td>
         <td>
           <div class="player-identity">
             <span class="player-main-name">${escapeHtml(p.name)} ${tagBadge}</span>
@@ -590,6 +601,27 @@ function renderRoster() {
       </tr>
     `;
   }).join('');
+  
+  // Attach attendance listeners
+  tbody.querySelectorAll('.roster-check').forEach(cb => {
+    cb.addEventListener('change', async (e) => {
+      const pid = parseInt(e.target.dataset.id, 10);
+      const online = e.target.checked;
+      try {
+        const res = await fetchApi('/api/attendance/check-in', {
+          method: 'POST',
+          body: JSON.stringify({ player_ids: [pid], is_online: online })
+        });
+        const countEl = document.getElementById('war-online-count');
+        if (countEl) countEl.textContent = res.total_online;
+        if (!window.warRoomAttendance) window.warRoomAttendance = new Set();
+        if (online) window.warRoomAttendance.add(pid); else window.warRoomAttendance.delete(pid);
+      } catch (err) {
+        showToast(err.message, 'error');
+        e.target.checked = !online; // revert
+      }
+    });
+  });
 }
 
 
@@ -1585,66 +1617,6 @@ function initEventListeners() {
 // ==========================================
 // WAR ROOM LOGIC
 // ==========================================
-let warRoomAttendance = new Set();
-let warRoomPlayers = []; // Cached array
-
-async function loadWarRoom() {
-  try {
-    const [attRes, playersRes] = await Promise.all([
-      fetchApi('/api/attendance'),
-      fetchApi('/api/players')
-    ]);
-    warRoomAttendance = new Set(attRes.checked_in_ids || []);
-    warRoomPlayers = playersRes || [];
-    
-    document.getElementById('war-online-count').textContent = warRoomAttendance.size;
-    renderWarRoomTable();
-  } catch (err) {
-    showToast('Failed to load War Room: ' + err.message, 'error');
-  }
-}
-
-function renderWarRoomTable() {
-  const tbody = document.getElementById('war-checkin-table-body');
-  if (!tbody) return;
-  tbody.innerHTML = '';
-  if (warRoomPlayers.length === 0) {
-    tbody.innerHTML = '<tr><td colspan="6" class="empty-cell">No players found</td></tr>';
-    return;
-  }
-  
-  warRoomPlayers.forEach(p => {
-    const isChecked = warRoomAttendance.has(p.id);
-    const tr = document.createElement('tr');
-    tr.innerHTML = `
-      <td style="text-align: center;">
-        <input type="checkbox" class="war-check" data-id="${p.id}" ${isChecked ? 'checked' : ''} style="width: 18px; height: 18px; cursor: pointer;">
-      </td>
-      <td><strong>${escapeHtml(p.in_game_name)}</strong></td>
-      <td>${escapeHtml(p.alliance_tag || '-')}</td>
-      <td>FC ${p.troops?.infantry?.level || 0}</td>
-      <td>${(p.troops?.infantry?.is_helios || p.troops?.lancer?.is_helios || p.troops?.marksman?.is_helios) ? '<span class="badge-helios">Helios</span>' : '-'}</td>
-      <td>${p.march_limit.toLocaleString()}</td>
-    `;
-    const cb = tr.querySelector('.war-check');
-    cb.addEventListener('change', async (e) => {
-      const pid = parseInt(e.target.dataset.id, 10);
-      const online = e.target.checked;
-      try {
-        const res = await fetchApi('/api/attendance/check-in', {
-          method: 'POST',
-          body: JSON.stringify({ player_ids: [pid], is_online: online })
-        });
-        document.getElementById('war-online-count').textContent = res.total_online;
-        if (online) warRoomAttendance.add(pid); else warRoomAttendance.delete(pid);
-      } catch (err) {
-        showToast(err.message, 'error');
-        e.target.checked = !online; // revert
-      }
-    });
-    tbody.appendChild(tr);
-  });
-}
 
 function setupWarRoomListeners() {
   const btnSelectAll = document.getElementById('btn-war-select-all');
@@ -1653,16 +1625,16 @@ function setupWarRoomListeners() {
   
   if (btnSelectAll) {
     btnSelectAll.addEventListener('click', async () => {
-      const allIds = warRoomPlayers.map(p => p.id);
+      const allIds = state.players.map(p => p.id);
       try {
         const res = await fetchApi('/api/attendance/select-all', {
           method: 'POST',
           body: JSON.stringify({ player_ids: allIds })
         });
-        warRoomAttendance = new Set(allIds);
+        window.warRoomAttendance = new Set(allIds);
         document.getElementById('war-online-count').textContent = res.total_online;
-        renderWarRoomTable();
-        showToast('All players checked in.', 'success');
+        renderRoster(); // re-render checkboxes
+        showToast('All currently listed players checked in.', 'success');
       } catch (err) {
         showToast(err.message, 'error');
       }
@@ -1672,11 +1644,11 @@ function setupWarRoomListeners() {
   if (btnClear) {
     btnClear.addEventListener('click', async () => {
       try {
-        await fetchApi('/api/attendance/reset', { method: 'POST' });
-        warRoomAttendance.clear();
-        document.getElementById('war-online-count').textContent = '0';
-        renderWarRoomTable();
-        showToast('Check-ins cleared.', 'info');
+        const res = await fetchApi('/api/attendance/reset', { method: 'POST' });
+        window.warRoomAttendance = new Set();
+        document.getElementById('war-online-count').textContent = res.total_online;
+        renderRoster(); // re-render checkboxes
+        showToast('All check-ins cleared.', 'info');
       } catch (err) {
         showToast(err.message, 'error');
       }
@@ -1685,16 +1657,23 @@ function setupWarRoomListeners() {
   
   if (btnCalc) {
     btnCalc.addEventListener('click', async () => {
+      if (!window.warRoomAttendance || window.warRoomAttendance.size === 0) {
+        showToast('Warning: No players checked in! Please check in players from the Roster tab first.', 'error');
+        return;
+      }
+      
+      const rallyCount = parseInt(document.getElementById('war-rallies').value, 10);
+      const generation = parseInt(document.getElementById('war-generation').value, 10);
       const scope = document.getElementById('war-scope').value;
-      const rallyCount = document.getElementById('war-rallies').value;
-      const generation = document.getElementById('war-generation').value;
-      // You could dynamically filter alliance tag if needed
+      
       const payload = {
+        rally_count: rallyCount,
+        generation: generation,
         event_scope: scope,
-        rally_count: parseInt(rallyCount, 10),
-        generation: parseInt(generation, 10),
-        online_only: true
+        online_only: true,
+        post_to_discord: false
       };
+      
       btnCalc.textContent = 'Calculating...';
       btnCalc.disabled = true;
       try {

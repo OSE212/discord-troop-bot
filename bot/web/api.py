@@ -1160,12 +1160,23 @@ async def handle_update_rules(request: web.Request) -> web.Response:
 
 # --- War Room / Attendance Endpoints ---
 
+def _get_attendance_set(request: web.Request, guild_id: Optional[str]) -> set:
+    key = guild_id or "global"
+    if "attendance" not in request.app:
+        request.app["attendance"] = {}
+    if key not in request.app["attendance"]:
+        request.app["attendance"][key] = set()
+    return request.app["attendance"][key]
+
 async def handle_get_attendance(request: web.Request) -> web.Response:
     """Returns the set of currently checked-in player IDs."""
     user = get_current_user(request)
     if not user:
         return web.json_response({"error": "Unauthorized"}, status=401)
-    attendance_set = request.app.get("attendance", set())
+    
+    target_guild = get_target_guild_id(request, user)
+    attendance_set = _get_attendance_set(request, target_guild)
+    
     return web.json_response({
         "status": "success",
         "checked_in_ids": list(attendance_set),
@@ -1178,6 +1189,8 @@ async def handle_attendance_check_in(request: web.Request) -> web.Response:
     if not user:
         return web.json_response({"error": "Unauthorized"}, status=401)
     
+    target_guild = get_target_guild_id(request, user)
+    
     try:
         data = await request.json()
         player_ids = set(data.get("player_ids", []))
@@ -1185,17 +1198,16 @@ async def handle_attendance_check_in(request: web.Request) -> web.Response:
     except Exception:
         return web.json_response({"error": "Invalid JSON"}, status=400)
     
-    if "attendance" not in request.app:
-        request.app["attendance"] = set()
+    attendance_set = _get_attendance_set(request, target_guild)
         
     if is_online:
-        request.app["attendance"].update(player_ids)
+        attendance_set.update(player_ids)
     else:
-        request.app["attendance"].difference_update(player_ids)
+        attendance_set.difference_update(player_ids)
         
     return web.json_response({
         "status": "success",
-        "total_online": len(request.app["attendance"])
+        "total_online": len(attendance_set)
     })
 
 async def handle_attendance_select_all(request: web.Request) -> web.Response:
@@ -1204,16 +1216,22 @@ async def handle_attendance_select_all(request: web.Request) -> web.Response:
     if not user:
         return web.json_response({"error": "Unauthorized"}, status=401)
     
+    target_guild = get_target_guild_id(request, user)
+    
     try:
         data = await request.json()
         all_ids = set(data.get("player_ids", []))
     except Exception:
         return web.json_response({"error": "Invalid JSON"}, status=400)
         
-    request.app["attendance"] = all_ids
+    key = target_guild or "global"
+    if "attendance" not in request.app:
+        request.app["attendance"] = {}
+    request.app["attendance"][key] = all_ids
+    
     return web.json_response({
         "status": "success", 
-        "total_online": len(request.app["attendance"])
+        "total_online": len(all_ids)
     })
 
 async def handle_attendance_reset(request: web.Request) -> web.Response:
@@ -1222,7 +1240,12 @@ async def handle_attendance_reset(request: web.Request) -> web.Response:
     if not user:
         return web.json_response({"error": "Unauthorized"}, status=401)
         
-    request.app["attendance"] = set()
+    target_guild = get_target_guild_id(request, user)
+    key = target_guild or "global"
+    if "attendance" not in request.app:
+        request.app["attendance"] = {}
+    request.app["attendance"][key] = set()
+    
     return web.json_response({
         "status": "success",
         "total_online": 0
@@ -1266,7 +1289,7 @@ async def handle_calculate_rallies(request: web.Request) -> web.Response:
     for p in players_db:
         player_dict = {
             "id": p.id,
-            "name": p.in_game_name,
+            "name": p.name,
             "alliance_tag": p.alliance_tag,
             "march_limit": p.march_limit,
             "troops": {}
@@ -1278,7 +1301,7 @@ async def handle_calculate_rallies(request: web.Request) -> web.Response:
             }
         pool.append(player_dict)
         
-    attendance_set = request.app.get("attendance", set())
+    attendance_set = _get_attendance_set(request, target_guild)
     
     results = MultiRallyAssignmentEngine.process_assignments(
         players=pool,

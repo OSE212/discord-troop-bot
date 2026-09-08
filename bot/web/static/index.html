@@ -285,10 +285,6 @@
           <div>
             <h2 class="pane-title">Player Roster</h2>
             <p class="pane-desc">Manage registered players, update march limits, and configure troop levels.</p>
-            <div class="sub-tabs" style="margin-top: 16px; display: flex; gap: 8px;">
-              <button class="sub-tab active" data-sub="sub-database" style="padding: 6px 16px; border-radius: var(--radius-sm); border: 1px solid var(--border-subtle); background: var(--bg-card); color: var(--text-primary); cursor: pointer;">Database</button>
-              <button class="sub-tab" data-sub="sub-war-room" style="padding: 6px 16px; border-radius: var(--radius-sm); border: 1px solid var(--border-subtle); background: transparent; color: var(--text-secondary); cursor: pointer;">⚔️ War Room</button>
-            </div>
           </div>
           <div class="header-actions">
             <button class="btn btn-secondary" id="btn-survey-generator" title="1-Click Google Survey Setup (Google Apps Script)">
@@ -337,11 +333,17 @@
           </div>
         </div>
 
-        <!-- SUB-PANE 1: DATABASE -->
-        <div id="sub-database" class="sub-pane active">
-          <div class="table-toolbar">
+        <div class="table-toolbar">
 
-            <div class="search-box">
+          <div style="display: flex; gap: 8px; align-items: center; margin-right: auto;">
+            <button class="btn btn-secondary" id="btn-war-select-all" style="padding: 6px 12px; font-size: 12px;">Check All</button>
+            <button class="btn btn-secondary" id="btn-war-clear" style="padding: 6px 12px; font-size: 12px;">Uncheck All</button>
+            <div class="stat-value" style="font-size: 13px; margin-left: 8px;">
+              Online: <span id="war-online-count" style="color: var(--color-cyan); font-weight: 700;">0</span>
+            </div>
+          </div>
+
+          <div class="search-box">
             <svg class="search-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
               <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
             </svg>
@@ -367,6 +369,7 @@
             <table class="data-table" id="roster-table">
               <thead>
                 <tr>
+                  <th style="width: 40px; text-align: center;">✅</th>
                   <th>Player</th>
                   <th>Game ID</th>
                   <th>March Limit</th>
@@ -385,74 +388,56 @@
             </table>
           </div>
         </div>
-        </div><!-- end sub-database -->
-
-        <!-- SUB-PANE 2: WAR ROOM (Check-in & Multi-Rally) -->
-        <div id="sub-war-room" class="sub-pane" style="display: none;">
-          <div class="table-toolbar" style="justify-content: space-between; align-items: center; margin-top: 16px;">
-            <div style="display: flex; gap: 12px; align-items: center;">
-              <button class="btn btn-primary" id="btn-war-select-all">Select All</button>
-              <button class="btn btn-danger-soft" id="btn-war-clear">Clear Check-Ins</button>
-              <div class="stat-value" style="font-size: 14px; margin-left: 16px;">
-                Online: <span id="war-online-count" style="color: var(--color-cyan); font-weight: 700;">0</span>
-              </div>
-            </div>
-            <div style="display: flex; gap: 12px; align-items: center;">
-              <select class="form-input" id="war-generation" style="width: auto;">
-                <option value="1">Gen 1</option>
-                <option value="2">Gen 2</option>
-                <option value="3">Gen 3</option>
-                <option value="4">Gen 4</option>
-                <option value="5">Gen 5</option>
-                <option value="6">Gen 6</option>
-                <option value="7" selected>Gen 7+</option>
-              </select>
-              <select class="form-input" id="war-rallies" style="width: auto;">
-                <option value="1">1 Rally</option>
-                <option value="2">2 Rallies</option>
-                <option value="3" selected>3 Rallies</option>
-                <option value="4">4 Rallies</option>
-                <option value="5">5 Rallies</option>
-                <option value="6">6 Rallies</option>
-              </select>
-              <select class="form-input" id="war-scope" style="width: auto;">
-                <option value="state">State Level</option>
-                <option value="alliance">Alliance Only</option>
-              </select>
-              <button class="btn btn-success" id="btn-war-calculate" style="background: var(--color-emerald); color: #fff;">Calculate Multi-Rally</button>
-            </div>
           </div>
-
-          <!-- Check-in Table -->
-          <div class="table-card" style="margin-bottom: 24px; max-height: 400px; overflow-y: auto;">
-            <table class="data-table" id="war-checkin-table">
-              <thead style="position: sticky; top: 0; background: var(--bg-card); z-index: 10;">
-                <tr>
-                  <th style="width: 50px; text-align: center;">✅</th>
-                  <th>Player Name</th>
-                  <th>Alliance</th>
-                  <th>Level / FC</th>
-                  <th>Helios</th>
-                  <th>March Limit</th>
-                </tr>
-              </thead>
-              <tbody id="war-checkin-table-body">
-                <tr><td colspan="6" class="empty-cell">Loading...</td></tr>
-              </tbody>
-            </table>
-          </div>
-
-          <!-- Results Section -->
-          <div id="war-results-container" style="display: flex; flex-direction: column; gap: 24px;">
-            <!-- Output injected here -->
-          </div>
-        </div><!-- end sub-war-room -->
-
+        </div>
       </section>
 
       <!-- TAB 3: FORMATION SIMULATOR -->
       <section class="tab-pane" id="pane-simulator">
         <div class="pane-header">
+          <div>
+            <h2 class="pane-title">Multi-Rally &amp; Formation Simulator</h2>
+            <p class="pane-desc">Simulate single formations or calculate large-scale multi-rally assignments automatically based on checked-in online players.</p>
+          </div>
+        </div>
+        
+        <!-- Multi-Rally Controls -->
+        <div class="glass-card setup-card" style="margin-bottom: 24px; border: 1px solid var(--color-cyan);">
+          <h3 class="card-title mb-16">Multi-Rally Auto Assignment</h3>
+          <p style="font-size: 13px; color: var(--text-secondary); margin-bottom: 16px;">
+            Uses the "Online" players checked in from the Roster tab to automatically group and balance players into optimal rally compositions.
+          </p>
+          
+          <div style="display: flex; gap: 12px; align-items: center; flex-wrap: wrap;">
+            <select class="form-input" id="war-generation" style="width: auto;">
+              <option value="1">Gen 1</option>
+              <option value="2">Gen 2</option>
+              <option value="3">Gen 3</option>
+              <option value="4">Gen 4</option>
+              <option value="5">Gen 5</option>
+              <option value="6">Gen 6</option>
+              <option value="7" selected>Gen 7+</option>
+            </select>
+            <select class="form-input" id="war-rallies" style="width: auto;">
+              <option value="1">1 Rally</option>
+              <option value="2">2 Rallies</option>
+              <option value="3" selected>3 Rallies</option>
+              <option value="4">4 Rallies</option>
+              <option value="5">5 Rallies</option>
+              <option value="6">6 Rallies</option>
+            </select>
+            <select class="form-input" id="war-scope" style="width: auto;">
+              <option value="state">State Level</option>
+              <option value="alliance">Alliance Only</option>
+            </select>
+            <button class="btn btn-success" id="btn-war-calculate" style="background: var(--color-cyan); color: #000; font-weight: 600;">Calculate Multi-Rally</button>
+          </div>
+          
+          <!-- Results Section -->
+          <div id="war-results-container" style="display: flex; flex-direction: column; gap: 24px; margin-top: 24px;">
+            <!-- Output injected here -->
+          </div>
+        </div>
           <div>
             <h2 class="pane-title">Formation Optimizer Simulator</h2>
             <p class="pane-desc">Simulate and fine-tune Attack/Defence and Rally/Garrison formations in real time.</p>
