@@ -1280,9 +1280,9 @@ async def handle_calculate_rallies(request: web.Request) -> web.Response:
     with request.app["db"].session() as session:
         repo = PlayerRepository(session)
         if target_guild:
-            players_db = repo.get_all_by_guild(target_guild)
+            players_db = repo.list_all(guild_id=target_guild)
         else:
-            players_db = repo.get_all()
+            players_db = repo.list_all()
             
     # Serialize players for engine
     pool = []
