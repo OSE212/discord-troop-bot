@@ -1691,28 +1691,6 @@ function setupWarRoomListeners() {
     });
   }
 
-  // Sub-tabs for Database vs War Room
-  document.querySelectorAll('.sub-tab').forEach(btn => {
-    btn.addEventListener('click', () => {
-      document.querySelectorAll('.sub-tab').forEach(b => {
-        b.classList.remove('active');
-        b.style.background = 'transparent';
-        b.style.color = 'var(--text-secondary)';
-      });
-      btn.classList.add('active');
-      btn.style.background = 'var(--bg-card)';
-      btn.style.color = 'var(--text-primary)';
-      
-      document.querySelectorAll('.sub-pane').forEach(p => p.style.display = 'none');
-      const targetId = btn.getAttribute('data-sub');
-      const target = document.getElementById(targetId);
-      if (target) target.style.display = 'block';
-      
-      if (targetId === 'sub-war-room') {
-        loadWarRoom();
-      }
-    });
-  });
 }
 
 function renderWarResults(rallies) {
