@@ -775,8 +775,46 @@ function syncRatio(source, val) {
   updateRatioBadge();
 }
 
-// Simulator Calculation
+// Simulator Calculation - branches based on Rally vs Garrison
 async function runSimulation() {
+  const formationType = state.sim.formation_type;
+
+  if (formationType === 'rally') {
+    // --- MULTI-RALLY AUTO ASSIGNMENT ---
+    if (!window.warRoomAttendance || window.warRoomAttendance.size === 0) {
+      showToast('No players checked in! Go to the Roster tab and check players as online first.', 'error');
+      return;
+    }
+    const rallyCount = parseInt(document.getElementById('sim-rally-count')?.value || '3', 10);
+    const scope = document.getElementById('sim-rally-scope')?.value || 'state';
+    const genSelect = document.getElementById('sim-gen-select');
+    const generation = parseInt(genSelect?.value || '7', 10) || 7;
+
+    elements.btnRunSim.disabled = true;
+    elements.btnRunSim.innerHTML = '<span>⏳</span> Calculating...';
+    try {
+      const res = await fetchApi('/api/rallies/calculate', {
+        method: 'POST',
+        body: JSON.stringify({
+          rally_count: rallyCount,
+          generation: generation,
+          event_scope: scope,
+          online_only: true,
+          post_to_discord: false,
+        }),
+      });
+      renderMultiRallyInSim(res.rallies || []);
+      showToast('Multi-Rally assignment complete!', 'success');
+    } catch (err) {
+      showToast(err.message, 'error');
+    } finally {
+      elements.btnRunSim.disabled = false;
+      elements.btnRunSim.innerHTML = '<span id="btn-run-simulation-label">Calculate Multi-Rally</span>';
+    }
+    return;
+  }
+
+  // --- GARRISON / SINGLE-FORMATION CALCULATION (original logic) ---
   const sum = Number(state.sim.inf) + Number(state.sim.lan) + Number(state.sim.mrk);
   if (sum !== 100) {
     showToast(`Ratio must sum to exactly 100% (currently ${sum}%)`, 'error');
@@ -806,21 +844,103 @@ async function runSimulation() {
       target_joiners: getSelectedHeroJoiners(),
     };
 
-
     const result = await fetchApi('/api/calculate', {
       method: 'POST',
       body: JSON.stringify(payload),
     });
 
     state.sim.result = result;
+    // Clear any rally results
+    const rallyResultsEl = document.getElementById('sim-rally-results');
+    if (rallyResultsEl) rallyResultsEl.style.display = 'none';
     renderSimResult();
     showToast('Formation calculation complete!', 'success');
   } catch (err) {
     showToast(err.message, 'error');
   } finally {
     elements.btnRunSim.disabled = false;
-    elements.btnRunSim.innerHTML = '<span>⚡</span> Run Calculation';
+    elements.btnRunSim.innerHTML = '<span>⚡</span> Run Garrison Calculation';
   }
+}
+
+function renderMultiRallyInSim(rallies) {
+  // Hide regular results panel
+  if (elements.simPlaceholder) elements.simPlaceholder.classList.add('hidden');
+  if (elements.simContent) elements.simContent.classList.add('hidden');
+
+  const container = document.getElementById('sim-rally-results');
+  if (!container) return;
+  container.style.display = 'block';
+  container.innerHTML = '';
+
+  if (rallies.length === 0) {
+    container.innerHTML = '<div class="glass-card"><p style="color:var(--text-muted);">No online players available to form rallies. Make sure players are checked in from the Roster tab.</p></div>';
+    return;
+  }
+
+  rallies.forEach(rally => {
+    const card = document.createElement('div');
+    card.className = 'glass-card';
+    card.style.borderTop = `3px solid ${rally.role === 'main_strike' ? 'var(--color-amber)' : rally.role === 'garrison_defense' ? 'var(--color-cyan)' : 'var(--color-rose)'}`;
+    card.style.marginBottom = '16px';
+    const p1 = rally.players?.[0];
+    const recCaptain = p1?.recommended_captain || '-';
+    const joiners = p1?.recommended_joiners?.join(', ') || '-';
+    card.innerHTML = `
+      <h3 style="margin-bottom: 8px;">${rally.label}</h3>
+      <div style="display:flex; gap:16px; margin-bottom: 16px; font-size:13px; flex-wrap:wrap;">
+        <div><span style="color:var(--text-muted);">Recommended Captain:</span> <strong>${recCaptain}</strong></div>
+        <div><span style="color:var(--text-muted);">Recommended Joiners:</span> <strong>${joiners}</strong></div>
+        <div><span style="color:var(--text-muted);">Ratio:</span> <strong>${rally.ratio?.infantry ?? '?'}% Inf / ${rally.ratio?.lancer ?? '?'}% Lan / ${rally.ratio?.marksman ?? '?'}% Mrk</strong></div>
+      </div>
+      <div class="table-responsive">
+        <table class="data-table">
+          <thead><tr><th>Player</th><th>Infantry</th><th>Lancers</th><th>Marksman</th><th>Total March</th><th>Notes</th></tr></thead>
+          <tbody>
+            ${(rally.players || []).map(p => `
+              <tr>
+                <td><strong>${escapeHtml(p.player_name)}</strong></td>
+                <td style="color:var(--troop-inf);">${p.infantry_count.toLocaleString()}</td>
+                <td style="color:var(--troop-lan);">${p.lancer_count.toLocaleString()}</td>
+                <td style="color:var(--troop-mrk);">${p.marksman_count.toLocaleString()}</td>
+                <td>${p.march_limit.toLocaleString()}</td>
+                <td>${p.tactical_note ? `<span style="color:var(--color-amber);font-size:12px;">${p.tactical_note}</span>` : ''}</td>
+              </tr>`).join('')}
+          </tbody>
+        </table>
+      </div>`;
+    container.appendChild(card);
+  });
+}
+
+function initSimTypeToggle() {
+  const toggle = document.getElementById('sim-type-toggle');
+  const rallyOptions = document.getElementById('sim-rally-options');
+  const btnLabel = document.getElementById('btn-run-simulation-label');
+  const simResultsPanel = document.getElementById('sim-results-card');
+  const rallyResultsEl = document.getElementById('sim-rally-results');
+
+  function updateForType(type) {
+    if (type === 'rally') {
+      if (rallyOptions) rallyOptions.style.display = 'block';
+      if (btnLabel) btnLabel.textContent = 'Calculate Multi-Rally';
+      if (simResultsPanel) simResultsPanel.style.display = 'none';
+      if (rallyResultsEl) rallyResultsEl.style.display = 'block';
+    } else {
+      if (rallyOptions) rallyOptions.style.display = 'none';
+      if (btnLabel) btnLabel.textContent = 'Run Garrison Calculation';
+      if (simResultsPanel) simResultsPanel.style.display = '';
+      if (rallyResultsEl) { rallyResultsEl.style.display = 'none'; rallyResultsEl.innerHTML = ''; }
+    }
+  }
+
+  if (toggle) {
+    toggle.querySelectorAll('.segment-btn').forEach(btn => {
+      btn.addEventListener('click', () => updateForType(btn.dataset.value));
+    });
+  }
+  // default: rally is active
+  updateForType('rally');
 }
 
 function renderSimResult() {
@@ -1778,6 +1898,7 @@ function renderWarResults(rallies) {
 document.addEventListener('DOMContentLoaded', () => {
   initEventListeners();
   setupWarRoomListeners();
+  initSimTypeToggle();
   loadPresets();
   loadHeroes();
   checkAuth().then(() => {

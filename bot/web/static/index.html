@@ -396,51 +396,8 @@
       <section class="tab-pane" id="pane-simulator">
         <div class="pane-header">
           <div>
-            <h2 class="pane-title">Multi-Rally &amp; Formation Simulator</h2>
-            <p class="pane-desc">Simulate single formations or calculate large-scale multi-rally assignments automatically based on checked-in online players.</p>
-          </div>
-        </div>
-        
-        <!-- Multi-Rally Controls -->
-        <div class="glass-card setup-card" style="margin-bottom: 24px; border: 1px solid var(--color-cyan);">
-          <h3 class="card-title mb-16">Multi-Rally Auto Assignment</h3>
-          <p style="font-size: 13px; color: var(--text-secondary); margin-bottom: 16px;">
-            Uses the "Online" players checked in from the Roster tab to automatically group and balance players into optimal rally compositions.
-          </p>
-          
-          <div style="display: flex; gap: 12px; align-items: center; flex-wrap: wrap;">
-            <select class="form-input" id="war-generation" style="width: auto;">
-              <option value="1">Gen 1</option>
-              <option value="2">Gen 2</option>
-              <option value="3">Gen 3</option>
-              <option value="4">Gen 4</option>
-              <option value="5">Gen 5</option>
-              <option value="6">Gen 6</option>
-              <option value="7" selected>Gen 7+</option>
-            </select>
-            <select class="form-input" id="war-rallies" style="width: auto;">
-              <option value="1">1 Rally</option>
-              <option value="2">2 Rallies</option>
-              <option value="3" selected>3 Rallies</option>
-              <option value="4">4 Rallies</option>
-              <option value="5">5 Rallies</option>
-              <option value="6">6 Rallies</option>
-            </select>
-            <select class="form-input" id="war-scope" style="width: auto;">
-              <option value="state">State Level</option>
-              <option value="alliance">Alliance Only</option>
-            </select>
-            <button class="btn btn-success" id="btn-war-calculate" style="background: var(--color-cyan); color: #000; font-weight: 600;">Calculate Multi-Rally</button>
-          </div>
-          
-          <!-- Results Section -->
-          <div id="war-results-container" style="display: flex; flex-direction: column; gap: 24px; margin-top: 24px;">
-            <!-- Output injected here -->
-          </div>
-        </div>
-          <div>
             <h2 class="pane-title">Formation Optimizer Simulator</h2>
-            <p class="pane-desc">Simulate and fine-tune Attack/Defence and Rally/Garrison formations in real time.</p>
+            <p class="pane-desc">Simulate single formations or calculate large-scale multi-rally assignments automatically based on checked-in online players.</p>
           </div>
         </div>
 
@@ -516,6 +473,32 @@
                   </svg>
                   Garrison
                 </button>
+              </div>
+            </div>
+
+            <!-- Rally-only options: shown when Rally type is selected -->
+            <div class="form-group" id="sim-rally-options" style="border: 1px solid var(--color-cyan); border-radius: 8px; padding: 12px; background: rgba(0,220,255,0.05);">
+              <label class="form-label" style="color: var(--color-cyan);">⚔️ Multi-Rally Assignment Options</label>
+              <p style="font-size: 12px; color: var(--text-muted); margin-bottom: 10px;">Uses checked-in online players from the Roster tab to auto-group rallies.</p>
+              <div style="display: flex; gap: 10px; flex-wrap: wrap; align-items: center;">
+                <div>
+                  <label class="form-label" style="font-size: 11px;">Number of Rallies</label>
+                  <select class="form-input" id="sim-rally-count" style="width: auto;">
+                    <option value="1">1 Rally</option>
+                    <option value="2">2 Rallies</option>
+                    <option value="3" selected>3 Rallies</option>
+                    <option value="4">4 Rallies</option>
+                    <option value="5">5 Rallies</option>
+                    <option value="6">6 Rallies</option>
+                  </select>
+                </div>
+                <div>
+                  <label class="form-label" style="font-size: 11px;">Scope</label>
+                  <select class="form-input" id="sim-rally-scope" style="width: auto;">
+                    <option value="state">State Level</option>
+                    <option value="alliance">Alliance Only</option>
+                  </select>
+                </div>
               </div>
             </div>
 
@@ -651,8 +634,10 @@
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
                 <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/>
               </svg>
-              Run Calculation
+              <span id="btn-run-simulation-label">Calculate Multi-Rally</span>
             </button>
+            <!-- Multi-rally results injected here when rally mode -->
+            <div id="sim-rally-results" style="display:none; margin-top: 16px;"></div>
           </div>
 
           <!-- Results Panel -->
