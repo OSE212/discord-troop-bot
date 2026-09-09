@@ -24,7 +24,8 @@ def _ratio_to_troop_type(ratio_pct: dict) -> dict:
     """Convert {'infantry': 50, 'lancer': 20, 'marksman': 30} to {TroopType.INFANTRY: 50, ...}"""
     mapping = {
         "infantry": TroopType.INFANTRY,
-        "lancer": TroopType.LANCER,
+        "lancer": TroopType.LANCERS,
+        "lancers": TroopType.LANCERS,
         "marksman": TroopType.MARKSMAN,
     }
     return {mapping[k]: v for k, v in ratio_pct.items() if k in mapping}
@@ -153,7 +154,7 @@ class MultiRallyAssignmentEngine:
                     player_name=p.get("name", "Unknown"),
                     march_limit=march,
                     infantry_count=counts.get(TroopType.INFANTRY, 0),
-                    lancer_count=counts.get(TroopType.LANCER, 0),
+                    lancer_count=counts.get(TroopType.LANCERS, 0),
                     marksman_count=counts.get(TroopType.MARKSMAN, 0),
                     recommended_captain=heroes["primary_captain"],
                     recommended_joiners=heroes["joiners"],
