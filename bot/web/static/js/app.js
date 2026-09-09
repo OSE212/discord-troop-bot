@@ -145,13 +145,12 @@ const elements = {
   simResultMeta: document.getElementById('sim-result-meta'),
   simGenSelect: document.getElementById('sim-gen-select'),
   simAllianceSelect: document.getElementById('sim-alliance-select'),
-  simPresetSelect: document.getElementById('sim-preset-select'),
-
-  simPresetGuide: document.getElementById('sim-preset-guide'),
-  simPresetPlace: document.getElementById('sim-preset-place'),
-  simPresetCallers: document.getElementById('sim-preset-callers'),
-  simPresetJoiners: document.getElementById('sim-preset-joiners'),
-  simPresetNotes: document.getElementById('sim-preset-notes'),
+  simPresetSelect: null, // removed
+  simPresetGuide: null,  // removed
+  simPresetPlace: null,
+  simPresetCallers: null,
+  simPresetJoiners: null,
+  simPresetNotes: null,
   simJoinersCard: document.getElementById('sim-joiners-card'),
   simJoinersList: document.getElementById('sim-joiners-list'),
   // Target Hero Slots (Simulator)
@@ -185,12 +184,16 @@ function formatNumber(num) {
   return Number(num).toLocaleString();
 }
 
-function formatFcLevel(lvl) {
+function formatFcLevel(lvl, decimals) {
   if (lvl === null || lvl === undefined) return '';
   const num = Number(lvl);
+  if (isNaN(num)) return '';
   if (num >= 31) {
-    return `FC${num - 30}`;
+    const fc = num - 30;
+    if (decimals !== undefined && !Number.isInteger(fc)) return `FC${fc.toFixed(decimals)}`;
+    return `FC${fc}`;
   }
+  if (decimals !== undefined && !Number.isInteger(num)) return `F${num.toFixed(decimals)}`;
   return `F${num}`;
 }
 
@@ -487,14 +490,14 @@ function renderStats() {
   const totalHelios = (s.helios_quantities.infantry || 0) + (s.helios_quantities.lancers || 0) + (s.helios_quantities.marksman || 0);
   elements.statTotalHelios.textContent = formatNumber(totalHelios);
 
-  const avgFcOverall = ((s.average_levels.infantry + s.average_levels.lancers + s.average_levels.marksman) / 3).toFixed(1);
-  elements.statAvgFc.textContent = `${formatFcLevel(avgFcOverall)}`;
-  elements.statFcBreakdown.textContent = `Inf: ${formatFcLevel(s.average_levels.infantry)} | Lan: ${formatFcLevel(s.average_levels.lancers)} | Mrk: ${formatFcLevel(s.average_levels.marksman)}`;
+  const avgFcOverall = (s.average_levels.infantry + s.average_levels.lancers + s.average_levels.marksman) / 3;
+  elements.statAvgFc.textContent = formatFcLevel(avgFcOverall, 3);
+  elements.statFcBreakdown.textContent = `Inf: ${formatFcLevel(s.average_levels.infantry, 3)} | Lan: ${formatFcLevel(s.average_levels.lancers, 3)} | Mrk: ${formatFcLevel(s.average_levels.marksman, 3)}`;
 
   // Breakdown bars
-  elements.barInfStat.textContent = `${formatNumber(s.helios_quantities.infantry)} Helios | Avg ${formatFcLevel(s.average_levels.infantry)}`;
-  elements.barLanStat.textContent = `${formatNumber(s.helios_quantities.lancers)} Helios | Avg ${formatFcLevel(s.average_levels.lancers)}`;
-  elements.barMrkStat.textContent = `${formatNumber(s.helios_quantities.marksman)} Helios | Avg ${formatFcLevel(s.average_levels.marksman)}`;
+  elements.barInfStat.textContent = `${formatNumber(s.helios_quantities.infantry)} Helios | Avg ${formatFcLevel(s.average_levels.infantry, 3)}`;
+  elements.barLanStat.textContent = `${formatNumber(s.helios_quantities.lancers)} Helios | Avg ${formatFcLevel(s.average_levels.lancers, 3)}`;
+  elements.barMrkStat.textContent = `${formatNumber(s.helios_quantities.marksman)} Helios | Avg ${formatFcLevel(s.average_levels.marksman, 3)}`;
 
 
   const maxVal = Math.max(1, s.helios_quantities.infantry, s.helios_quantities.lancers, s.helios_quantities.marksman);
@@ -808,6 +811,13 @@ async function runSimulation() {
           post_to_discord: false,
         }),
       });
+      // Activate split layout
+      const wrap = document.getElementById('sim-params-wrap');
+      if (wrap) wrap.className = 'sim-layout-split';
+      const setupCard = document.querySelector('.setup-card');
+      if (setupCard) setupCard.style.maxWidth = '100%';
+      const colEl = document.getElementById('sim-results-column');
+      if (colEl) colEl.style.display = 'block';
       renderMultiRallyInSim(res.rallies || []);
       showToast('Multi-Rally assignment complete!', 'success');
     } catch (err) {
@@ -855,8 +865,15 @@ async function runSimulation() {
     });
 
     state.sim.result = result;
+    // Activate split layout
+    const wrap = document.getElementById('sim-params-wrap');
+    if (wrap) wrap.className = 'sim-layout-split';
+    const setupCard = document.querySelector('.setup-card');
+    if (setupCard) setupCard.style.maxWidth = '100%';
+    const colEl = document.getElementById('sim-results-column');
+    if (colEl) colEl.style.display = 'block';
     const rallyResultsEl = document.getElementById('sim-rally-results');
-    if (rallyResultsEl) rallyResultsEl.style.display = 'none';
+    if (rallyResultsEl) rallyResultsEl.innerHTML = '';
     const simResultsPanel = document.getElementById('sim-results-card');
     if (simResultsPanel) simResultsPanel.style.display = 'block';
     renderSimResult();
@@ -873,10 +890,11 @@ function renderMultiRallyInSim(rallies) {
   // Hide regular results panel
   if (elements.simPlaceholder) elements.simPlaceholder.classList.add('hidden');
   if (elements.simContent) elements.simContent.classList.add('hidden');
+  const simResultsPanel = document.getElementById('sim-results-card');
+  if (simResultsPanel) simResultsPanel.style.display = 'none';
 
   const container = document.getElementById('sim-rally-results');
   if (!container) return;
-  container.style.display = 'block';
   container.innerHTML = '';
 
   if (rallies.length === 0) {
@@ -892,8 +910,12 @@ function renderMultiRallyInSim(rallies) {
     const p1 = rally.players?.[0];
     const recCaptain = p1?.recommended_captain || '-';
     const joiners = p1?.recommended_joiners?.join(', ') || '-';
+    const avgFcLabel = rally.avg_fc_level != null ? `<span style="background:rgba(0,242,254,0.12);border:1px solid var(--color-cyan);border-radius:6px;padding:2px 8px;font-size:12px;color:var(--color-cyan);font-weight:700;">Avg FC: ${formatFcLevel(rally.avg_fc_level, 3)}</span>` : '';
     card.innerHTML = `
-      <h3 style="margin-bottom: 8px;">${rally.label}</h3>
+      <div style="display:flex;align-items:center;gap:12px;margin-bottom:8px;flex-wrap:wrap;">
+        <h3 style="margin:0;">${rally.label}</h3>
+        ${avgFcLabel}
+      </div>
       <div style="display:flex; gap:16px; margin-bottom: 16px; font-size:13px; flex-wrap:wrap;">
         <div><span style="color:var(--text-muted);">Recommended Captain:</span> <strong>${recCaptain}</strong></div>
         <div><span style="color:var(--text-muted);">Recommended Joiners:</span> <strong>${joiners}</strong></div>
@@ -940,11 +962,19 @@ function initSimTypeToggle() {
 
   function updateForType(type) {
     state.sim.formation_type = type;
+    // Reset layout to full-width when switching type
+    const wrap = document.getElementById('sim-params-wrap');
+    if (wrap) wrap.className = 'sim-layout-full';
+    const setupCard = document.querySelector('.setup-card');
+    if (setupCard) setupCard.style.maxWidth = '860px';
+    const colEl = document.getElementById('sim-results-column');
+    if (colEl) colEl.style.display = 'none';
+
     if (type === 'rally') {
       if (rallyCountGroup) rallyCountGroup.style.display = 'block';
       if (btnLabel) btnLabel.textContent = 'Calculate Multi-Rally';
       if (simResultsPanel) simResultsPanel.style.display = 'none';
-      if (rallyResultsEl) rallyResultsEl.style.display = 'block';
+      if (rallyResultsEl) { rallyResultsEl.innerHTML = ''; }
       // Rally can be attack or defence — unlock mode
       if (modeToggle) modeToggle.querySelectorAll('.segment-btn').forEach(b => { b.disabled = false; b.style.opacity = '1'; });
     } else {
@@ -952,7 +982,7 @@ function initSimTypeToggle() {
       if (rallyCountGroup) rallyCountGroup.style.display = 'none';
       if (btnLabel) btnLabel.textContent = 'Run Garrison Calculation';
       if (simResultsPanel) simResultsPanel.style.display = 'none';
-      if (rallyResultsEl) { rallyResultsEl.style.display = 'none'; rallyResultsEl.innerHTML = ''; }
+      if (rallyResultsEl) { rallyResultsEl.innerHTML = ''; }
       // Lock mode to defence
       if (modeToggle) {
         modeToggle.querySelectorAll('.segment-btn').forEach(b => {
@@ -968,6 +998,7 @@ function initSimTypeToggle() {
     if (onlineCountEl && window.warRoomAttendance) {
       const count = window.warRoomAttendance.size;
       onlineCountEl.textContent = count > 0 ? ` (${count} online checked in)` : ' (0 checked in — go to Roster tab)';
+
     }
   }
 
@@ -1280,13 +1311,8 @@ function populateGenDropdown() {
 
 function onGenChange() {
   const gen = elements.simGenSelect.value;
-  const presetSel = elements.simPresetSelect;
-  // Clear presets dropdown
-  presetSel.innerHTML = '<option value="">— Pick formation —</option>';
-  elements.simPresetGuide.classList.add('hidden');
 
   if (!gen) {
-    presetSel.disabled = true;
     // No gen selected → show all heroes
     populateHeroSlotDropdowns();
     return;
@@ -1294,21 +1320,6 @@ function onGenChange() {
 
   // Filter hero dropdowns to only show heroes available in this generation
   populateHeroSlotDropdowns(gen);
-
-  const matches = state.presets.filter(p => String(p.generation) === gen);
-  matches.forEach((p, i) => {
-    const opt = document.createElement('option');
-    opt.value = i;
-    opt.textContent = `${p.name} (${p.ratio_str})`;
-    presetSel.appendChild(opt);
-  });
-  presetSel.disabled = false;
-
-  // Auto-select first preset
-  if (matches.length > 0) {
-    presetSel.selectedIndex = 1;
-    applyPreset(matches[0]);
-  }
 }
 
 function onPresetChange() {
@@ -1336,18 +1347,8 @@ function applyPreset(preset) {
       elements.btnHeroPresets.forEach(b => b.classList.remove('active'));
     }
   }
-
-  // Show guide card
-  const guide = elements.simPresetGuide;
-  guide.classList.remove('hidden');
-  elements.simPresetPlace.textContent = preset.place;
-  const callers = preset.callers;
-  elements.simPresetCallers.textContent =
-    `Callers — Inf: ${callers.infantry || '-'} | Lan: ${callers.lancer || '-'} | Mrk: ${callers.marksman || '-'}`;
-  elements.simPresetJoiners.textContent =
-    `Joiners ★: ${preset.joiners.join(' · ')}`;
-  elements.simPresetNotes.textContent = preset.notes || '';
 }
+
 
 async function saveRules() {
   const attackOrder = elements.ruleAttackOrder.value.split(',').map(s => s.trim().toLowerCase()).filter(Boolean);
@@ -1753,12 +1754,9 @@ function initEventListeners() {
     });
   }
 
-  // Generation preset dropdowns
+  // Generation dropdown
   if (elements.simGenSelect) {
     elements.simGenSelect.addEventListener('change', onGenChange);
-  }
-  if (elements.simPresetSelect) {
-    elements.simPresetSelect.addEventListener('change', onPresetChange);
   }
 
   // Server Selector

@@ -65,6 +65,7 @@ class RallyGroup:
     label: str
     ratio: dict               # {infantry, lancer, marksman} percentages
     players: List[PlayerAssignmentRow] = field(default_factory=list)
+    avg_fc_level: Optional[float] = None
 
     def to_dict(self) -> dict:
         return {
@@ -73,4 +74,5 @@ class RallyGroup:
             "label": self.label,
             "ratio": self.ratio,
             "players": [p.to_dict() for p in self.players],
+            "avg_fc_level": self.avg_fc_level,
         }

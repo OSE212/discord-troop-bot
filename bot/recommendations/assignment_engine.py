@@ -163,12 +163,17 @@ class MultiRallyAssignmentEngine:
                     fc_level=avg_level,
                 ))
 
+            # Compute avg_fc_level for this rally's players
+            fc_vals = [r.fc_level for r in rows if r.fc_level is not None]
+            avg_fc = round(sum(fc_vals) / len(fc_vals), 3) if fc_vals else None
+
             result.append(RallyGroup(
                 rally_index=idx + 1,
                 role=role,
                 label=label,
                 ratio=ratio,
                 players=rows,
+                avg_fc_level=avg_fc,
             ))
 
         return result

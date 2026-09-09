@@ -401,10 +401,11 @@
 
         <div class="sim-layout-full" id="sim-params-wrap">
           <!-- Setup Panel -->
-          <div class="glass-card setup-card" style="max-width: 860px; margin: 0 auto;">
+          <div class="glass-card setup-card">
+
             <h3 class="card-title mb-16">Formation Parameters</h3>
 
-            <!-- Generation & Alliance Tag Preset Selectors -->
+            <!-- Generation & Alliance Tag Filters -->
             <div class="form-group">
               <label class="form-label">Generation &amp; Alliance Tag Filters</label>
               <div class="gen-preset-row">
@@ -414,17 +415,6 @@
                 <select class="form-input" id="sim-alliance-select">
                   <option value="">All Alliance Tags</option>
                 </select>
-              </div>
-              <div class="gen-preset-row" style="margin-top: 8px;">
-                <select class="form-input" id="sim-preset-select" disabled>
-                  <option value="">— Pick formation preset —</option>
-                </select>
-              </div>
-              <div class="preset-guide-card hidden" id="sim-preset-guide">
-                <div class="preset-guide-place" id="sim-preset-place"></div>
-                <div class="preset-guide-callers" id="sim-preset-callers"></div>
-                <div class="preset-guide-joiners" id="sim-preset-joiners"></div>
-                <div class="preset-guide-notes" id="sim-preset-notes"></div>
               </div>
             </div>
 
@@ -636,12 +626,16 @@
               </svg>
               <span id="btn-run-simulation-label">Calculate Multi-Rally</span>
             </button>
-            <!-- Multi-rally results injected here when rally mode -->
-            <div id="sim-rally-results" style="display:none; margin-top: 16px;"></div>
           </div>
 
-          <!-- Results Panel (shown after garrison calc) -->
-          <div class="glass-card results-card" id="sim-results-card" style="display: none; max-width: 860px; margin: 24px auto 0;">
+          <!-- Results column: rally results OR garrison results appear here as grid sibling -->
+          <div id="sim-results-column" style="display:none;">
+            <!-- Multi-rally results injected here when rally mode -->
+            <div id="sim-rally-results"></div>
+
+            <!-- Results Panel (shown after garrison calc) -->
+          <div class="glass-card results-card" id="sim-results-card" style="display: none;">
+
             <div class="results-placeholder" id="sim-placeholder">
               <div class="placeholder-icon">
                 <svg width="52" height="52" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round" opacity="0.4">
@@ -746,11 +740,13 @@
                   <!-- Generated via JS -->
                 </div>
                 <p class="joiners-note">Only the 1st expedition skill of the first 4 joiners activates in rally/garrison. Sorted by star ★ &amp; skill score.</p>
-              </div>
+                </div>
             </div>
-          </div>
-        </div>
+          </div><!-- end sim-results-card -->
+          </div><!-- end sim-results-column -->
+        </div><!-- end sim-params-wrap -->
       </section>
+
 
       <!-- TAB 4: RULES CONFIGURATION -->
       <section class="tab-pane" id="pane-rules">

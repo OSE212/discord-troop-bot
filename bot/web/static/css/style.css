@@ -886,10 +886,36 @@ body {
   align-items: start;
 }
 
+.sim-layout-split {
+  display: grid;
+  grid-template-columns: 40% 60%;
+  gap: 24px;
+  align-items: start;
+  width: 100%;
+}
+
 .sim-layout-full {
   display: block;
   width: 100%;
 }
+
+/* In full mode, the setup card is centered */
+.sim-layout-full .setup-card {
+  max-width: 860px;
+  margin: 0 auto;
+}
+
+/* In split mode, setup card takes full column */
+.sim-layout-split .setup-card {
+  max-width: 100%;
+  margin: 0;
+}
+
+#sim-results-column {
+  display: none;
+  min-height: 200px;
+}
+
 
 .toggle-segmented {
   display: grid;
@@ -2596,7 +2622,10 @@ body {
   }
 
   /* ---- SIMULATOR ---- */
-  .simulator-layout {
+  .simulator-layout,
+  .sim-layout-split {
+    grid-template-columns: 1fr;
+    display: flex;
     flex-direction: column;
     gap: 16px;
   }
