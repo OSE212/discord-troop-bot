@@ -779,16 +779,21 @@ function syncRatio(source, val) {
 async function runSimulation() {
   const formationType = state.sim.formation_type;
 
+  // Get scope from new toggle
+  const scopeToggle = document.getElementById('sim-scope-toggle');
+  const scope = scopeToggle?.querySelector('.segment-btn.active')?.dataset.value || 'state';
+  const genSelect = document.getElementById('sim-gen-select');
+  const generation = parseInt(genSelect?.value || '7', 10) || 7;
+
+  // Both modes require online players
+  if (!window.warRoomAttendance || window.warRoomAttendance.size === 0) {
+    showToast('No players checked in! Go to the Roster tab and mark players as online first.', 'error');
+    return;
+  }
+
   if (formationType === 'rally') {
     // --- MULTI-RALLY AUTO ASSIGNMENT ---
-    if (!window.warRoomAttendance || window.warRoomAttendance.size === 0) {
-      showToast('No players checked in! Go to the Roster tab and check players as online first.', 'error');
-      return;
-    }
     const rallyCount = parseInt(document.getElementById('sim-rally-count')?.value || '3', 10);
-    const scope = document.getElementById('sim-rally-scope')?.value || 'state';
-    const genSelect = document.getElementById('sim-gen-select');
-    const generation = parseInt(genSelect?.value || '7', 10) || 7;
 
     elements.btnRunSim.disabled = true;
     elements.btnRunSim.innerHTML = '<span>⏳</span> Calculating...';
@@ -809,12 +814,12 @@ async function runSimulation() {
       showToast(err.message, 'error');
     } finally {
       elements.btnRunSim.disabled = false;
-      elements.btnRunSim.innerHTML = '<span id="btn-run-simulation-label">Calculate Multi-Rally</span>';
+      elements.btnRunSim.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg><span id="btn-run-simulation-label">Calculate Multi-Rally</span>';
     }
     return;
   }
 
-  // --- GARRISON / SINGLE-FORMATION CALCULATION (original logic) ---
+  // --- GARRISON / SINGLE-FORMATION CALCULATION ---
   const sum = Number(state.sim.inf) + Number(state.sim.lan) + Number(state.sim.mrk);
   if (sum !== 100) {
     showToast(`Ratio must sum to exactly 100% (currently ${sum}%)`, 'error');
@@ -832,8 +837,8 @@ async function runSimulation() {
 
   try {
     const payload = {
-      mode: state.sim.mode,
-      formation_type: state.sim.formation_type,
+      mode: 'defence', // garrison is always defence
+      formation_type: 'garrison',
       capacity: capacity,
       alliance_tag: elements.simAllianceSelect ? elements.simAllianceSelect.value : '',
       ratio: {
@@ -850,16 +855,17 @@ async function runSimulation() {
     });
 
     state.sim.result = result;
-    // Clear any rally results
     const rallyResultsEl = document.getElementById('sim-rally-results');
     if (rallyResultsEl) rallyResultsEl.style.display = 'none';
+    const simResultsPanel = document.getElementById('sim-results-card');
+    if (simResultsPanel) simResultsPanel.style.display = 'block';
     renderSimResult();
-    showToast('Formation calculation complete!', 'success');
+    showToast('Garrison calculation complete!', 'success');
   } catch (err) {
     showToast(err.message, 'error');
   } finally {
     elements.btnRunSim.disabled = false;
-    elements.btnRunSim.innerHTML = '<span>⚡</span> Run Garrison Calculation';
+    elements.btnRunSim.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg><span id="btn-run-simulation-label">Run Garrison Calculation</span>';
   }
 }
 
@@ -914,29 +920,64 @@ function renderMultiRallyInSim(rallies) {
 }
 
 function initSimTypeToggle() {
-  const toggle = document.getElementById('sim-type-toggle');
-  const rallyOptions = document.getElementById('sim-rally-options');
+  const typeToggle = document.getElementById('sim-type-toggle');
+  const modeToggle = document.getElementById('sim-mode-toggle');
+  const rallyCountGroup = document.getElementById('sim-rally-count-group');
   const btnLabel = document.getElementById('btn-run-simulation-label');
   const simResultsPanel = document.getElementById('sim-results-card');
   const rallyResultsEl = document.getElementById('sim-rally-results');
+  const scopeToggle = document.getElementById('sim-scope-toggle');
+
+  // Wire scope toggle (state/alliance)
+  if (scopeToggle) {
+    scopeToggle.querySelectorAll('.segment-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        scopeToggle.querySelectorAll('.segment-btn').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+      });
+    });
+  }
 
   function updateForType(type) {
+    state.sim.formation_type = type;
     if (type === 'rally') {
-      if (rallyOptions) rallyOptions.style.display = 'block';
+      if (rallyCountGroup) rallyCountGroup.style.display = 'block';
       if (btnLabel) btnLabel.textContent = 'Calculate Multi-Rally';
       if (simResultsPanel) simResultsPanel.style.display = 'none';
       if (rallyResultsEl) rallyResultsEl.style.display = 'block';
+      // Rally can be attack or defence — unlock mode
+      if (modeToggle) modeToggle.querySelectorAll('.segment-btn').forEach(b => { b.disabled = false; b.style.opacity = '1'; });
     } else {
-      if (rallyOptions) rallyOptions.style.display = 'none';
+      // Garrison = defence only
+      if (rallyCountGroup) rallyCountGroup.style.display = 'none';
       if (btnLabel) btnLabel.textContent = 'Run Garrison Calculation';
-      if (simResultsPanel) simResultsPanel.style.display = '';
+      if (simResultsPanel) simResultsPanel.style.display = 'none';
       if (rallyResultsEl) { rallyResultsEl.style.display = 'none'; rallyResultsEl.innerHTML = ''; }
+      // Lock mode to defence
+      if (modeToggle) {
+        modeToggle.querySelectorAll('.segment-btn').forEach(b => {
+          b.classList.toggle('active', b.dataset.value === 'defence');
+          b.disabled = true;
+          b.style.opacity = b.dataset.value === 'defence' ? '1' : '0.4';
+        });
+        state.sim.mode = 'defence';
+      }
+    }
+    // Update online count badge
+    const onlineCountEl = document.getElementById('sim-online-count');
+    if (onlineCountEl && window.warRoomAttendance) {
+      const count = window.warRoomAttendance.size;
+      onlineCountEl.textContent = count > 0 ? ` (${count} online checked in)` : ' (0 checked in — go to Roster tab)';
     }
   }
 
-  if (toggle) {
-    toggle.querySelectorAll('.segment-btn').forEach(btn => {
-      btn.addEventListener('click', () => updateForType(btn.dataset.value));
+  if (typeToggle) {
+    typeToggle.querySelectorAll('.segment-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        typeToggle.querySelectorAll('.segment-btn').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        updateForType(btn.dataset.value);
+      });
     });
   }
   // default: rally is active
@@ -997,17 +1038,26 @@ function renderSimResult() {
     `;
   }).join('');
 
-  // Assignments
+  // Assignments — group allocations by player, one row per player
   if (!res.allocations || res.allocations.length === 0) {
-    elements.simAssignmentsTbody.innerHTML = '<tr><td colspan="3" class="empty-cell">No players allocated (ensure players have complete registrations).</td></tr>';
+    elements.simAssignmentsTbody.innerHTML = '<tr><td colspan="5" class="empty-cell">No players allocated (ensure players have complete registrations).</td></tr>';
   } else {
-    elements.simAssignmentsTbody.innerHTML = res.allocations.map((a) => `
+    // Group by player_name
+    const byPlayer = {};
+    res.allocations.forEach(a => {
+      if (!byPlayer[a.player_name]) byPlayer[a.player_name] = { infantry: 0, lancers: 0, marksman: 0, total: 0 };
+      const key = a.troop_type.toLowerCase();
+      byPlayer[a.player_name][key] = (byPlayer[a.player_name][key] || 0) + a.amount;
+      byPlayer[a.player_name].total += a.amount;
+    });
+    elements.simAssignmentsTbody.innerHTML = Object.entries(byPlayer).map(([name, t]) => `
       <tr>
-        <td><strong>${escapeHtml(a.player_name)}</strong></td>
-        <td><span class="pill-level">${escapeHtml(a.troop_type.toUpperCase())}</span></td>
-        <td><strong>${formatNumber(a.amount)}</strong></td>
-      </tr>
-    `).join('');
+        <td><strong>${escapeHtml(name)}</strong></td>
+        <td style="color:var(--troop-inf)">${formatNumber(t.infantry)}</td>
+        <td style="color:var(--troop-lan)">${formatNumber(t.lancers)}</td>
+        <td style="color:var(--troop-mrk)">${formatNumber(t.marksman)}</td>
+        <td><strong>${formatNumber(t.total)}</strong></td>
+      </tr>`).join('');
   }
 
   // Top 4 Joiners

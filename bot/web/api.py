@@ -1294,10 +1294,11 @@ async def handle_calculate_rallies(request: web.Request) -> web.Response:
             "march_limit": p.march_limit,
             "troops": {}
         }
-        for troop in p.troops:
+        for troop in p.troop_profiles:
             player_dict["troops"][troop.troop_type.value] = {
                 "level": troop.level,
-                "helios": troop.is_helios
+                "helios": troop.helios,
+                "helios_quantity": troop.helios_quantity,
             }
         pool.append(player_dict)
         

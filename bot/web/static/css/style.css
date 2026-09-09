@@ -886,6 +886,11 @@ body {
   align-items: start;
 }
 
+.sim-layout-full {
+  display: block;
+  width: 100%;
+}
+
 .toggle-segmented {
   display: grid;
   grid-template-columns: 1fr 1fr;

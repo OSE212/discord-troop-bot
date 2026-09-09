@@ -401,9 +401,9 @@
           </div>
         </div>
 
-        <div class="simulator-layout">
+        <div class="sim-layout-full" id="sim-params-wrap">
           <!-- Setup Panel -->
-          <div class="glass-card setup-card">
+          <div class="glass-card setup-card" style="max-width: 860px; margin: 0 auto;">
             <h3 class="card-title mb-16">Formation Parameters</h3>
 
             <!-- Generation & Alliance Tag Preset Selectors -->
@@ -476,30 +476,32 @@
               </div>
             </div>
 
-            <!-- Rally-only options: shown when Rally type is selected -->
-            <div class="form-group" id="sim-rally-options" style="border: 1px solid var(--color-cyan); border-radius: 8px; padding: 12px; background: rgba(0,220,255,0.05);">
-              <label class="form-label" style="color: var(--color-cyan);">⚔️ Multi-Rally Assignment Options</label>
-              <p style="font-size: 12px; color: var(--text-muted); margin-bottom: 10px;">Uses checked-in online players from the Roster tab to auto-group rallies.</p>
-              <div style="display: flex; gap: 10px; flex-wrap: wrap; align-items: center;">
-                <div>
-                  <label class="form-label" style="font-size: 11px;">Number of Rallies</label>
-                  <select class="form-input" id="sim-rally-count" style="width: auto;">
-                    <option value="1">1 Rally</option>
-                    <option value="2">2 Rallies</option>
-                    <option value="3" selected>3 Rallies</option>
-                    <option value="4">4 Rallies</option>
-                    <option value="5">5 Rallies</option>
-                    <option value="6">6 Rallies</option>
-                  </select>
-                </div>
-                <div>
-                  <label class="form-label" style="font-size: 11px;">Scope</label>
-                  <select class="form-input" id="sim-rally-scope" style="width: auto;">
-                    <option value="state">State Level</option>
-                    <option value="alliance">Alliance Only</option>
-                  </select>
-                </div>
+            <!-- General: Event Scope (applies to both Rally and Garrison) -->
+            <div class="form-group">
+              <label class="form-label">Event Scope</label>
+              <div class="toggle-segmented" id="sim-scope-toggle">
+                <button class="segment-btn active" data-value="state">🌍 State Level</button>
+                <button class="segment-btn" data-value="alliance">🏰 Alliance Only</button>
               </div>
+            </div>
+
+            <!-- Rally Count: only shown for Rally -->
+            <div class="form-group" id="sim-rally-count-group">
+              <label class="form-label">Number of Rallies</label>
+              <select class="form-input" id="sim-rally-count" style="width: auto;">
+                <option value="1">1 Rally</option>
+                <option value="2">2 Rallies</option>
+                <option value="3" selected>3 Rallies</option>
+                <option value="4">4 Rallies</option>
+                <option value="5">5 Rallies</option>
+                <option value="6">6 Rallies</option>
+              </select>
+            </div>
+
+            <!-- Online players notice -->
+            <div class="form-group" style="background: rgba(0,220,255,0.06); border: 1px solid var(--color-cyan); border-radius: 8px; padding: 10px; font-size: 13px; color: var(--text-secondary);">
+              ⚡ Both Rally and Garrison use the <strong>checked-in online players</strong> from the Roster tab.
+              <span id="sim-online-count" style="color: var(--color-cyan); font-weight:600;"></span>
             </div>
 
             <div class="form-group">
@@ -720,8 +722,10 @@
                     <thead>
                       <tr>
                         <th>Player</th>
-                        <th>Troop Type</th>
-                        <th>Assigned Count</th>
+                        <th style="color:var(--troop-inf)">Infantry</th>
+                        <th style="color:var(--troop-lan)">Lancers</th>
+                        <th style="color:var(--troop-mrk)">Marksman</th>
+                        <th>Total March</th>
                       </tr>
                     </thead>
                     <tbody id="sim-assignments-tbody">
@@ -746,6 +750,10 @@
                 <p class="joiners-note">Only the 1st expedition skill of the first 4 joiners activates in rally/garrison. Sorted by star ★ &amp; skill score.</p>
               </div>
             </div>
+          </div>
+
+          <!-- Results Panel (shown after garrison calc) -->
+          <div class="glass-card results-card" id="sim-results-card" style="display:none; max-width: 860px; margin: 24px auto 0;">
           </div>
         </div>
       </section>
