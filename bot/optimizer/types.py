@@ -107,3 +107,4 @@ class FormationResult:
     base_capacity: int = 0
     target_capacity: int = 0
     joiners: list[JoinerRecommendation] = field(default_factory=list)
+    avg_fc_level: float | None = None

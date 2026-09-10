@@ -134,10 +134,26 @@ def optimize(
     deviation = compute_deviation(request.ratio, actual_ratio)
     status = Status.EXACT if all(remaining_target[t] <= 0 for t in TroopType) else Status.BEST_EFFORT
 
-    selected_players = sorted(summaries.values(), key=lambda s: s.total, reverse=True)
-    
+    cap_id = getattr(request, 'captain_id', None)
+    if cap_id and cap_id in summaries:
+        cap_summary = summaries[cap_id]
+        other_players = sorted([s for s in summaries.values() if s.player_id != cap_id], key=lambda s: s.total, reverse=True)
+        selected_players = [cap_summary] + other_players
+    else:
+        selected_players = sorted(summaries.values(), key=lambda s: s.total, reverse=True)
+
+    # Compute average FC level across selected players
+    fc_levels = []
+    for s in selected_players:
+        p_obj = players_by_id.get(s.player_id)
+        if p_obj and p_obj.troop_types:
+            levels = [avail.level for avail in p_obj.troop_types.values() if avail.level is not None]
+            if levels:
+                fc_levels.append(sum(levels) / len(levels))
+    avg_fc = round(sum(fc_levels) / len(fc_levels), 3) if fc_levels else None
+
     # Exclude the captain from being recommended as a joiner
-    joiner_pool = [s for s in selected_players if s.player_id != getattr(request, 'captain_id', None)]
+    joiner_pool = [s for s in selected_players if s.player_id != cap_id]
     joiners = _select_top_joiners(joiner_pool, players_by_id, request)
 
     return FormationResult(
@@ -151,6 +167,7 @@ def optimize(
         base_capacity=request.capacity,
         target_capacity=effective_target_capacity,
         joiners=joiners,
+        avg_fc_level=avg_fc,
     )
 
 

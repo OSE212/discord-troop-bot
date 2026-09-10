@@ -562,19 +562,121 @@ async function loadPlayers() {
 
 function populateCaptainSelect() {
   const sel = elements.simCaptainSelect;
-  if (!sel) return;
-  const currentVal = sel.value;
-  sel.innerHTML = '<option value="">Auto / Highest Power Player</option>';
+  if (sel) {
+    const currentVal = sel.value;
+    sel.innerHTML = '<option value="">Auto / Highest Power Player</option>';
+
+    const players = state.players || [];
+    players.forEach(p => {
+      const opt = document.createElement('option');
+      opt.value = p.id;
+      opt.textContent = `${p.name} (March Limit: ${formatNumber(p.march_limit)})`;
+      sel.appendChild(opt);
+    });
+
+    sel.value = currentVal;
+  }
+  renderCaptainSelectionBlocks();
+}
+
+function renderCaptainSelectionBlocks() {
+  const container = document.getElementById('sim-captains-container');
+  if (!container) return;
+
+  const formationType = state.sim.formation_type || 'rally';
+  const rallyCountEl = document.getElementById('sim-rally-count');
+  const count = formationType === 'garrison' ? 1 : parseInt(rallyCountEl?.value || '1', 10);
+  const genSelect = document.getElementById('sim-gen-select');
+  const selectedGen = parseInt(genSelect?.value || '7', 10) || 7;
+
+  const catalog = state.heroCatalog || [];
+  const validHeroes = catalog.filter(h => !h.gen_introduced || h.gen_introduced <= selectedGen);
+
+  const infHeroes = validHeroes.filter(h => h.troop_type === 'infantry');
+  const lanHeroes = validHeroes.filter(h => h.troop_type === 'lancer');
+  const mrkHeroes = validHeroes.filter(h => h.troop_type === 'marksman');
+
+  const makeHeroOptionsHtml = (troopType, heroList) => {
+    let html = `<option value="">Auto (${troopType.toUpperCase()} Hero)</option>`;
+    heroList.forEach(h => {
+      const genLabel = h.gen_introduced ? ` [Gen ${h.gen_introduced}]` : '';
+      const buffLabel = h.buff ? ` - ${h.buff}` : '';
+      html += `<option value="${escapeHtml(h.name)}">${escapeHtml(h.name)}${genLabel}${escapeHtml(buffLabel)}</option>`;
+    });
+    return html;
+  };
 
   const players = state.players || [];
+  let playerOptionsHtml = '<option value="">Auto / Highest Power Player</option>';
   players.forEach(p => {
-    const opt = document.createElement('option');
-    opt.value = p.id;
-    opt.textContent = `${p.name} (March Limit: ${formatNumber(p.march_limit)})`;
-    sel.appendChild(opt);
+    const isOnline = window.warRoomAttendance ? window.warRoomAttendance.has(p.id) : true;
+    if (isOnline) {
+      playerOptionsHtml += `<option value="${p.id}">${escapeHtml(p.name)} (March: ${formatNumber(p.march_limit)})</option>`;
+    }
   });
 
-  sel.value = currentVal;
+  let blocksHtml = '';
+
+  for (let i = 1; i <= count; i++) {
+    const blockTitle = formationType === 'garrison'
+      ? 'Garrison Captain & 3 Heroes'
+      : (count > 1 ? `Rally ${i} Captain & 3 Heroes` : 'Rally Captain & 3 Heroes');
+
+    const prevCap = document.getElementById(`sim-captain-select-${i}`)?.value || '';
+    const prevInf = document.getElementById(`sim-captain-hero-inf-${i}`)?.value || '';
+    const prevLan = document.getElementById(`sim-captain-hero-lan-${i}`)?.value || '';
+    const prevMrk = document.getElementById(`sim-captain-hero-mrk-${i}`)?.value || '';
+
+    blocksHtml += `
+      <div class="form-group captain-selection-block" style="background:rgba(255,255,255,0.02); padding:14px; border-radius:8px; border:1px solid var(--border-color); margin-bottom:16px;">
+        <div class="label-with-meta" style="margin-bottom:10px;">
+          <label class="form-label" style="color:var(--color-amber); font-weight:700; font-size:13px; margin:0;">👑 ${blockTitle}</label>
+          <span class="form-section-hint">Infantry (Left) | Lancer (Mid) | Marksman (Right) — Gen ≤ ${selectedGen}</span>
+        </div>
+        
+        <div style="margin-bottom:10px;">
+          <select class="form-input sim-captain-select-input" id="sim-captain-select-${i}" data-index="${i}">
+            ${playerOptionsHtml}
+          </select>
+        </div>
+
+        <div style="display:grid; grid-template-columns:repeat(3, 1fr); gap:8px;">
+          <div>
+            <label style="font-size:11px; color:var(--troop-inf); font-weight:600; display:block; margin-bottom:4px;">🛡️ Infantry Hero (Left)</label>
+            <select class="form-input sim-hero-select-inf" id="sim-captain-hero-inf-${i}">
+              ${makeHeroOptionsHtml('infantry', infHeroes)}
+            </select>
+          </div>
+          <div>
+            <label style="font-size:11px; color:var(--troop-lan); font-weight:600; display:block; margin-bottom:4px;">⚡ Lancer Hero (Middle)</label>
+            <select class="form-input sim-hero-select-lan" id="sim-captain-hero-lan-${i}">
+              ${makeHeroOptionsHtml('lancer', lanHeroes)}
+            </select>
+          </div>
+          <div>
+            <label style="font-size:11px; color:var(--troop-mrk); font-weight:600; display:block; margin-bottom:4px;">🎯 Marksman Hero (Right)</label>
+            <select class="form-input sim-hero-select-mrk" id="sim-captain-hero-mrk-${i}">
+              ${makeHeroOptionsHtml('marksman', mrkHeroes)}
+            </select>
+          </div>
+        </div>
+      </div>
+    `;
+  }
+
+  container.innerHTML = blocksHtml;
+
+  for (let i = 1; i <= count; i++) {
+    const capEl = document.getElementById(`sim-captain-select-${i}`);
+    const infEl = document.getElementById(`sim-captain-hero-inf-${i}`);
+    const lanEl = document.getElementById(`sim-captain-hero-lan-${i}`);
+    const mrkEl = document.getElementById(`sim-captain-hero-mrk-${i}`);
+
+    if (capEl && prevCap && capEl.querySelector(`option[value="${prevCap}"]`)) capEl.value = prevCap;
+    if (infEl && prevInf && infEl.querySelector(`option[value="${prevInf}"]`)) infEl.value = prevInf;
+    if (lanEl && prevLan && lanEl.querySelector(`option[value="${prevLan}"]`)) lanEl.value = prevLan;
+    if (mrkEl && prevMrk && mrkEl.querySelector(`option[value="${prevMrk}"]`)) mrkEl.value = prevMrk;
+  }
 }
 
 
@@ -837,13 +939,75 @@ async function runSimulation() {
           post_to_discord: false,
         }),
       });
-      // Activate split layout
+function getCaptainPayloadData() {
+  const formationType = state.sim.formation_type || 'rally';
+  const rallyCountEl = document.getElementById('sim-rally-count');
+  const count = formationType === 'garrison' ? 1 : parseInt(rallyCountEl?.value || '1', 10);
+
+  if (count === 1) {
+    const capIdVal = document.getElementById('sim-captain-select-1')?.value;
+    const infHero = document.getElementById('sim-captain-hero-inf-1')?.value || '';
+    const lanHero = document.getElementById('sim-captain-hero-lan-1')?.value || '';
+    const mrkHero = document.getElementById('sim-captain-hero-mrk-1')?.value || '';
+
+    return {
+      captain_id: capIdVal ? parseInt(capIdVal, 10) : null,
+      captain_heroes: [infHero, lanHero, mrkHero].filter(Boolean),
+    };
+  } else {
+    const captainsList = [];
+    for (let i = 1; i <= count; i++) {
+      const capIdVal = document.getElementById(`sim-captain-select-${i}`)?.value;
+      const infHero = document.getElementById(`sim-captain-hero-inf-${i}`)?.value || '';
+      const lanHero = document.getElementById(`sim-captain-hero-lan-${i}`)?.value || '';
+      const mrkHero = document.getElementById(`sim-captain-hero-mrk-${i}`)?.value || '';
+
+      captainsList.push({
+        captain_id: capIdVal ? parseInt(capIdVal, 10) : null,
+        captain_heroes: [infHero, lanHero, mrkHero].filter(Boolean),
+      });
+    }
+
+    return {
+      rally_captains: captainsList,
+    };
+  }
+}
+
+async function runSimulation() {
+  const formationType = state.sim.formation_type || 'rally';
+  const captainData = getCaptainPayloadData();
+
+  if (formationType === 'rally') {
+    const rallyCount = parseInt(document.getElementById('sim-rally-count').value, 10);
+    const generation = parseInt(document.getElementById('sim-gen-select').value, 10);
+    const scope = document.getElementById('sim-scope-toggle')?.querySelector('.active')?.dataset.value || 'state';
+    const allianceTag = elements.simAllianceSelect ? elements.simAllianceSelect.value : '';
+
+    elements.btnRunSim.disabled = true;
+    elements.btnRunSim.innerHTML = '<span>⏳</span> Calculating Multi-Rally...';
+
+    try {
+      const res = await fetchApi('/api/rallies/calculate', {
+        method: 'POST',
+        body: JSON.stringify({
+          rally_count: rallyCount,
+          generation: generation,
+          event_scope: scope,
+          alliance_tag: allianceTag,
+          online_only: true,
+          post_to_discord: false,
+          rally_captains: captainData.rally_captains,
+        }),
+      });
+
       const wrap = document.getElementById('sim-params-wrap');
       if (wrap) wrap.className = 'sim-layout-split';
       const setupCard = document.querySelector('.setup-card');
       if (setupCard) setupCard.style.maxWidth = '100%';
       const colEl = document.getElementById('sim-results-column');
       if (colEl) colEl.style.display = 'block';
+
       renderMultiRallyInSim(res.rallies || []);
       showToast('Multi-Rally assignment complete!', 'success');
     } catch (err) {
@@ -878,9 +1042,8 @@ async function runSimulation() {
       capacity: capacity,
       alliance_tag: elements.simAllianceSelect ? elements.simAllianceSelect.value : '',
       ratio: { infantry: state.sim.inf, lancers: state.sim.lan, marksman: state.sim.mrk },
-      // Read these from your new HTML dropdowns
-      captain_id: parseInt(document.getElementById('sim-captain-select').value, 10) || null,
-      captain_heroes: getSelectedCaptainHeroes(),
+      captain_id: captainData.captain_id,
+      captain_heroes: captainData.captain_heroes,
       target_joiners: getSelectedHeroJoiners(),
     };
 
@@ -890,7 +1053,6 @@ async function runSimulation() {
     });
 
     state.sim.result = result;
-    // Activate split layout
     const wrap = document.getElementById('sim-params-wrap');
     if (wrap) wrap.className = 'sim-layout-split';
     const setupCard = document.querySelector('.setup-card');
@@ -901,6 +1063,7 @@ async function runSimulation() {
     if (rallyResultsEl) rallyResultsEl.innerHTML = '';
     const simResultsPanel = document.getElementById('sim-results-card');
     if (simResultsPanel) simResultsPanel.style.display = 'block';
+
     renderSimResult();
     showToast('Garrison calculation complete!', 'success');
   } catch (err) {
@@ -912,7 +1075,6 @@ async function runSimulation() {
 }
 
 function renderMultiRallyInSim(rallies) {
-  // Hide regular results panel
   if (elements.simPlaceholder) elements.simPlaceholder.classList.add('hidden');
   if (elements.simContent) elements.simContent.classList.add('hidden');
   const simResultsPanel = document.getElementById('sim-results-card');
@@ -922,7 +1084,7 @@ function renderMultiRallyInSim(rallies) {
   if (!container) return;
   container.innerHTML = '';
 
-  if (rallies.length === 0) {
+  if (!rallies || rallies.length === 0) {
     container.innerHTML = '<div class="glass-card"><p style="color:var(--text-muted);">No online players available to form rallies. Make sure players are checked in from the Roster tab.</p></div>';
     return;
   }
@@ -931,21 +1093,99 @@ function renderMultiRallyInSim(rallies) {
     const card = document.createElement('div');
     card.className = 'glass-card';
     card.style.borderTop = `3px solid ${rally.role === 'main_strike' ? 'var(--color-amber)' : rally.role === 'garrison_defense' ? 'var(--color-cyan)' : 'var(--color-rose)'}`;
-    card.style.marginBottom = '16px';
+    card.style.marginBottom = '20px';
+
     const p1 = rally.players?.[0];
     const recCaptain = p1?.recommended_captain || '-';
-    const joiners = p1?.recommended_joiners?.join(', ') || '-';
+    const joiners = p1?.recommended_joiners || [];
     const avgFcLabel = rally.avg_fc_level != null ? `<span style="background:rgba(0,242,254,0.12);border:1px solid var(--color-cyan);border-radius:6px;padding:2px 8px;font-size:12px;color:var(--color-cyan);font-weight:700;">Avg FC: ${formatFcLevel(rally.avg_fc_level, 3)}</span>` : '';
+
+    let totalInf = 0, totalLan = 0, totalMrk = 0;
+    (rally.players || []).forEach(p => {
+      totalInf += (p.infantry_count || 0);
+      totalLan += (p.lancer_count || 0);
+      totalMrk += (p.marksman_count || 0);
+    });
+    const totalAssigned = totalInf + totalLan + totalMrk;
+
+    const actualInfPct = totalAssigned > 0 ? Math.round((totalInf / totalAssigned) * 100) : 0;
+    const actualLanPct = totalAssigned > 0 ? Math.round((totalLan / totalAssigned) * 100) : 0;
+    const actualMrkPct = totalAssigned > 0 ? Math.round((totalMrk / totalAssigned) * 100) : 0;
+
+    const targetInfPct = rally.ratio?.infantry || 0;
+    const targetLanPct = rally.ratio?.lancer || 0;
+    const targetMrkPct = rally.ratio?.marksman || 0;
+
     card.innerHTML = `
-      <div style="display:flex;align-items:center;gap:12px;margin-bottom:8px;flex-wrap:wrap;">
-        <h3 style="margin:0;">${rally.label}</h3>
-        ${avgFcLabel}
+      <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:12px;flex-wrap:wrap;">
+        <div style="display:flex;align-items:center;gap:10px;">
+          <h3 style="margin:0;font-size:18px;">${rally.label}</h3>
+          ${avgFcLabel}
+        </div>
+        <span style="background:rgba(255,255,255,0.06);border:1px solid var(--border-color);border-radius:6px;padding:3px 10px;font-size:12px;color:var(--color-amber);font-weight:600;">Status: EXACT | Players: ${rally.players.length}</span>
       </div>
-      <div style="display:flex; gap:16px; margin-bottom: 16px; font-size:13px; flex-wrap:wrap;">
-        <div><span style="color:var(--text-muted);">Recommended Captain:</span> <strong>${recCaptain}</strong></div>
-        <div><span style="color:var(--text-muted);">Recommended Joiners:</span> <strong>${joiners}</strong></div>
-        <div><span style="color:var(--text-muted);">Ratio:</span> <strong>${rally.ratio?.infantry ?? '?'}% Inf / ${rally.ratio?.lancer ?? '?'}% Lan / ${rally.ratio?.marksman ?? '?'}% Mrk</strong></div>
+
+      <!-- Metrics Grid -->
+      <div class="metrics-grid" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:10px;margin-bottom:16px;">
+        <div class="metric-card">
+          <div class="metric-val" style="color:var(--color-cyan);">100%</div>
+          <div class="metric-lbl">Capacity Filled</div>
+        </div>
+        <div class="metric-card">
+          <div class="metric-val">${formatNumber(totalAssigned)}</div>
+          <div class="metric-lbl">Total Assigned</div>
+        </div>
+        <div class="metric-card">
+          <div class="metric-val">${rally.players.length}</div>
+          <div class="metric-lbl">Players Deployed</div>
+        </div>
       </div>
+
+      <!-- Target vs Actual Breakdown -->
+      <div style="margin-bottom:16px;background:rgba(0,0,0,0.15);padding:12px;border-radius:8px;border:1px solid var(--border-color);">
+        <div style="font-size:12px;font-weight:700;color:var(--text-secondary);margin-bottom:8px;">Target vs Actual Troop Breakdown</div>
+        <div class="troop-bar-group" style="margin-bottom:6px;">
+          <div class="troop-bar-header" style="font-size:11px;">
+            <span>Infantry (Actual: ${formatNumber(totalInf)} / ${targetInfPct}%)</span>
+            <span>${actualInfPct}% actual</span>
+          </div>
+          <div class="progress-track" style="height:6px;"><div class="progress-fill inf" style="width:${actualInfPct}%"></div></div>
+        </div>
+        <div class="troop-bar-group" style="margin-bottom:6px;">
+          <div class="troop-bar-header" style="font-size:11px;">
+            <span>Lancers (Actual: ${formatNumber(totalLan)} / ${targetLanPct}%)</span>
+            <span>${actualLanPct}% actual</span>
+          </div>
+          <div class="progress-track" style="height:6px;"><div class="progress-fill lan" style="width:${actualLanPct}%"></div></div>
+        </div>
+        <div class="troop-bar-group">
+          <div class="troop-bar-header" style="font-size:11px;">
+            <span>Marksman (Actual: ${formatNumber(totalMrk)} / ${targetMrkPct}%)</span>
+            <span>${actualMrkPct}% actual</span>
+          </div>
+          <div class="progress-track" style="height:6px;"><div class="progress-fill mrk" style="width:${actualMrkPct}%"></div></div>
+        </div>
+      </div>
+
+      <!-- Top 4 Joiners (Hero Optimization) -->
+      ${joiners.length > 0 ? `
+      <div style="margin-bottom:16px;background:rgba(255,255,255,0.02);padding:12px;border-radius:8px;border:1px solid var(--border-color);">
+        <div style="font-size:12px;font-weight:700;color:var(--color-amber);margin-bottom:8px;">⭐ Recommended Joiner Heroes (Skill Buffs)</div>
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:8px;">
+          ${joiners.slice(0,4).map((jHero, idx) => {
+            const playerRec = rally.players[idx + 1];
+            const pName = playerRec ? playerRec.player_name : 'Joiner';
+            return `
+              <div style="background:rgba(0,0,0,0.2);padding:8px;border-radius:6px;border:1px solid rgba(255,255,255,0.05);">
+                <div style="font-size:10px;color:var(--color-cyan);font-weight:700;">Slot ${idx+1} Joiner</div>
+                <div style="font-size:12px;font-weight:700;">${escapeHtml(pName)}</div>
+                <div style="font-size:11px;color:var(--color-amber);">${escapeHtml(jHero)}</div>
+              </div>`;
+          }).join('')}
+        </div>
+      </div>` : ''}
+
+      <!-- Player Assignments Table -->
       <div class="table-responsive">
         <table class="data-table">
           <thead><tr><th>Player</th><th>Infantry</th><th>Lancers</th><th>Marksman</th><th>Total March</th><th>Notes</th></tr></thead>
@@ -957,7 +1197,7 @@ function renderMultiRallyInSim(rallies) {
                 roleBadge = `<span style="background:rgba(255,180,0,0.18); border:1px solid var(--color-amber); color:var(--color-amber); border-radius:4px; padding:2px 6px; font-size:11px; font-weight:700; margin-right:6px;">👑 Captain</span>`;
               } else if (idx <= 4) {
                 roleBadge = `<span style="background:rgba(0,242,254,0.12); border:1px solid var(--color-cyan); color:var(--color-cyan); border-radius:4px; padding:2px 6px; font-size:11px; font-weight:600; margin-right:6px;">Slot ${idx} Joiner</span>`;
-                const firstHero = p.recommended_joiners ? p.recommended_joiners[0] : '';
+                const firstHero = p.recommended_joiners ? (p.recommended_joiners[idx - 1] || p.recommended_joiners[0]) : '';
                 if (firstHero) heroNote = `<span style="font-size:11px; color:var(--color-cyan); font-weight:600;">[Hero 1: ${escapeHtml(firstHero)}]</span> `;
               } else {
                 roleBadge = `<span style="background:rgba(255,255,255,0.05); color:var(--text-muted); border-radius:4px; padding:2px 6px; font-size:11px; margin-right:6px;">Joiner</span>`;
@@ -968,7 +1208,7 @@ function renderMultiRallyInSim(rallies) {
                   <td style="color:var(--troop-inf); font-weight:600;">${p.infantry_count.toLocaleString()}</td>
                   <td style="color:var(--troop-lan); font-weight:600;">${p.lancer_count.toLocaleString()}</td>
                   <td style="color:var(--troop-mrk); font-weight:600;">${p.marksman_count.toLocaleString()}</td>
-                  <td>${p.march_limit.toLocaleString()}</td>
+                  <td><strong>${p.march_limit.toLocaleString()}</strong></td>
                   <td>${p.tactical_note ? `<span style="color:var(--color-amber);font-size:12px;">${p.tactical_note}</span>` : ''}</td>
                 </tr>`;
             }).join('')}
@@ -1046,11 +1286,13 @@ function initSimTypeToggle() {
         typeToggle.querySelectorAll('.segment-btn').forEach(b => b.classList.remove('active'));
         btn.classList.add('active');
         updateForType(btn.dataset.value);
+        renderCaptainSelectionBlocks();
       });
     });
   }
   // default: rally is active
   updateForType('rally');
+  renderCaptainSelectionBlocks();
 }
 
 function renderSimResult() {
@@ -1122,11 +1364,20 @@ function renderSimResult() {
 
     const joinerRecs = res.joiner_recommendations || [];
 
-    const rows = Object.entries(byPlayer).map(([name, t], idx) => {
+    const playerEntries = Object.entries(byPlayer);
+    if (res.captain_id) {
+      playerEntries.sort(([nameA, a], [nameB, b]) => {
+        if (a.player_id === res.captain_id) return -1;
+        if (b.player_id === res.captain_id) return 1;
+        return 0;
+      });
+    }
+
+    const rows = playerEntries.map(([name, t], idx) => {
       let roleBadge = '';
       let heroInfo = '';
 
-      const isCaptain = (res.captain_id && t.player_id === res.captain_id) || (idx === 0);
+      const isCaptain = res.captain_id ? (t.player_id === res.captain_id) : (idx === 0);
 
       if (isCaptain) {
         roleBadge = `<span style="background:rgba(255,180,0,0.18); border:1px solid var(--color-amber); color:var(--color-amber); border-radius:4px; padding:2px 6px; font-size:11px; font-weight:700; margin-right:6px;">👑 Captain</span>`;
@@ -1462,11 +1713,13 @@ function onGenChange() {
   if (!gen) {
     // No gen selected → show all heroes
     populateHeroSlotDropdowns();
+    renderCaptainSelectionBlocks();
     return;
   }
 
   // Filter hero dropdowns to only show heroes available in this generation
   populateHeroSlotDropdowns(gen);
+  renderCaptainSelectionBlocks();
 }
 
 function onPresetChange() {
@@ -1904,6 +2157,13 @@ function initEventListeners() {
   // Generation dropdown
   if (elements.simGenSelect) {
     elements.simGenSelect.addEventListener('change', onGenChange);
+  }
+
+  const rallyCountEl = document.getElementById('sim-rally-count');
+  if (rallyCountEl) {
+    rallyCountEl.addEventListener('change', () => {
+      renderCaptainSelectionBlocks();
+    });
   }
 
   // Server Selector

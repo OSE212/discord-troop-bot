@@ -77,24 +77,12 @@ class MultiRallyAssignmentEngine:
         rally_count: int,
         generation: int,
         scope: EventScope = EventScope.STATE,
-        alliance_tag: Optional[str] = None,
         online_only: bool = True,
         attendance: Optional[set] = None,
+        rally_captains: Optional[List[Dict[str, Any]]] = None,
     ) -> List[RallyGroup]:
         """
         Compute rally assignments.
-
-        Args:
-            players:      Full serialized player list from the DB.
-            rally_count:  Number of rallies (1–6).
-            generation:   Server generation (1–7) for hero recommendations.
-            scope:        EventScope.ALLIANCE or EventScope.STATE.
-            alliance_tag: Filter by alliance tag when scope == ALLIANCE.
-            online_only:  Whether to filter by attendance set.
-            attendance:   Set of player IDs currently checked in online.
-
-        Returns:
-            List of RallyGroup, one per rally slot.
         """
         # 1 — Scope filtering
         pool = list(players)
@@ -115,8 +103,27 @@ class MultiRallyAssignmentEngine:
         role_sequence = _assign_role_sequence(rally_count)
         n_rallies = len(role_sequence)
 
-        # 5 — Distribute players across rallies (round-robin by power rank)
         groups: List[List[Dict]] = [[] for _ in range(n_rallies)]
+        custom_captains_map: Dict[int, Dict[str, Any]] = {} # rally_idx -> captain dict
+
+        # Pre-assign designated captains
+        if rally_captains and isinstance(rally_captains, list):
+            for r_idx, cap_info in enumerate(rally_captains[:n_rallies]):
+                if not cap_info or not isinstance(cap_info, dict):
+                    continue
+                cap_id = cap_info.get("captain_id")
+                if cap_id:
+                    # Find player in pool
+                    cap_player = next((p for p in pool if p["id"] == cap_id), None)
+                    if cap_player:
+                        groups[r_idx].append(cap_player)
+                        custom_captains_map[r_idx] = {
+                            "player": cap_player,
+                            "heroes": cap_info.get("captain_heroes") or []
+                        }
+                        pool.remove(cap_player)
+
+        # Distribute remaining players round-robin across rallies
         for i, player in enumerate(pool):
             groups[i % n_rallies].append(player)
 

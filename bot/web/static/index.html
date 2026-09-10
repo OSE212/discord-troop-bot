@@ -543,61 +543,8 @@
               </div>
             </div>
 
-            <!-- Captain & 3 Heroes Selection -->
-            <div class="form-group" style="background: rgba(255,255,255,0.03); border: 1px solid var(--border-color); border-radius: 12px; padding: 16px;">
-              <div class="label-with-meta mb-12">
-                <label class="form-label" style="font-weight:700; color:var(--color-amber);">👑 Rally / Garrison Captain &amp; 3 Heroes</label>
-                <span class="form-section-hint">Leader &amp; Benefit Notes</span>
-              </div>
-
-              <!-- Captain Player Select -->
-              <div class="form-group mb-12">
-                <label class="form-label" style="font-size:12px;">Select Captain</label>
-                <select class="form-input" id="sim-captain-select">
-                  <option value="">Auto / Highest Power Player</option>
-                </select>
-                <div style="font-size:11px; color:var(--text-muted); margin-top:4px;">
-                  ℹ️ Captain contributes troops with their <strong>max march capacity</strong> using the <strong>exact chosen ratio</strong>.
-                </div>
-              </div>
-
-              <!-- Captain's 3 Heroes -->
-              <label class="form-label" style="font-size:12px;">Captain's 3 Heroes (Benefit Notes Attached)</label>
-              <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 10px;">
-                <div class="sim-hero-slot">
-                  <div class="sim-slot-header">
-                    <span class="sim-slot-num">Hero 1</span>
-                    <span class="sim-slot-badge">Primary</span>
-                  </div>
-                  <select class="form-input sim-captain-hero-select" id="sim-captain-hero-1">
-                    <option value="Jeronimo">Jeronimo</option>
-                  </select>
-                  <div class="sim-slot-buff" id="sim-captain-buff-1">+25% Attack &amp; Rally Damage Boost</div>
-                </div>
-
-                <div class="sim-hero-slot">
-                  <div class="sim-slot-header">
-                    <span class="sim-slot-num">Hero 2</span>
-                    <span class="sim-slot-badge">Secondary</span>
-                  </div>
-                  <select class="form-input sim-captain-hero-select" id="sim-captain-hero-2">
-                    <option value="Molly">Molly</option>
-                  </select>
-                  <div class="sim-slot-buff" id="sim-captain-buff-2">+15% Stun Chance &amp; Flank Attack</div>
-                </div>
-
-                <div class="sim-hero-slot">
-                  <div class="sim-slot-header">
-                    <span class="sim-slot-num">Hero 3</span>
-                    <span class="sim-slot-badge">Tertiary</span>
-                  </div>
-                  <select class="form-input sim-captain-hero-select" id="sim-captain-hero-3">
-                    <option value="Bahiti">Bahiti</option>
-                  </select>
-                  <div class="sim-slot-buff" id="sim-captain-buff-3">+20% Marksman Precision</div>
-                </div>
-              </div>
-            </div>
+            <!-- Dynamic Captains Container (Renders 1 to N Captain blocks based on rally count & garrison) -->
+            <div id="sim-captains-container"></div>
 
             <!-- Target Joiner Heroes (Top 4 Buffs) -->
             <div class="form-group">

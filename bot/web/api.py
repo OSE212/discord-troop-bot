@@ -999,6 +999,7 @@ async def handle_calculate(request: web.Request) -> web.Response:
             "captain_id": captain_id,
             "captain_heroes": captain_heroes,
             "captain_hero_buffs": cap_hero_buffs,
+            "avg_fc_level": result.avg_fc_level,
             "base_capacity": base_cap,
             "target_capacity": target_cap,
             "garrison_gap": garrison_gap,
@@ -1034,43 +1035,48 @@ async def handle_get_presets(request: web.Request) -> web.Response:
 # --- Hero Catalog & Presets Endpoint ---
 
 HERO_CATALOG = [
-    # Attack Buffers — gen_introduced is the first generation they appear as joiners/callers
-    {"name": "Jessie",     "role": "attack",  "buff": "+25% Damage Dealt (Skill 5)",          "gen_introduced": 1},
-    {"name": "Jasser",     "role": "attack",  "buff": "+25% Damage Dealt (Skill 5)",          "gen_introduced": 1},
-    {"name": "Seoyoon",    "role": "attack",  "buff": "+25% Attack (Skill 5)",                "gen_introduced": 1},
-    {"name": "Alonso",     "role": "attack",  "buff": "AoE Burst & Backline Disruption",      "gen_introduced": 2},
-    {"name": "Mia",        "role": "attack",  "buff": "+20% Lancer Damage & Strike",          "gen_introduced": 3},
-    {"name": "Greg",       "role": "attack",  "buff": "+20% Marksman Attack",                 "gen_introduced": 3},
-    {"name": "Lynn",       "role": "attack",  "buff": "Marksman Critical Boost",              "gen_introduced": 4},
-    {"name": "Norah",      "role": "attack",  "buff": "Enemy Damage Reduction & Attack boost","gen_introduced": 5},
-    {"name": "Renee",      "role": "attack",  "buff": "Lancer Cavalry Penetration",           "gen_introduced": 6},
-    {"name": "Wayne",      "role": "attack",  "buff": "+25% Rally Attack & Shield",           "gen_introduced": 6},
-    {"name": "Hendrik",    "role": "attack",  "buff": "Lethality boost & Ranged Amplification","gen_introduced": 8},
-    {"name": "Fred",       "role": "attack",  "buff": "Lancer Critical Surge",                "gen_introduced": 9},
-    {"name": "Blanchette", "role": "attack",  "buff": "Marksman Vulnerability & Critical Stun","gen_introduced": 10},
-    {"name": "Teresa",     "role": "attack",  "buff": "Marksman Lethality Amplification",     "gen_introduced": 10},
+    # Infantry Heroes
+    {"name": "Sergey",     "role": "defence", "troop_type": "infantry", "buff": "+20% Defense (Skill 5)",               "gen_introduced": 1},
+    {"name": "Jeronimo",   "role": "caller",  "troop_type": "infantry", "buff": "+25% Attack & Rally Damage Boost",     "gen_introduced": 1},
+    {"name": "Flint",      "role": "defence", "troop_type": "infantry", "buff": "+20% Infantry Defense & Burn",         "gen_introduced": 1},
+    {"name": "Natalia",    "role": "caller",  "troop_type": "infantry", "buff": "+15% Rally Defense & Stun",            "gen_introduced": 1},
+    {"name": "Ling Xue",   "role": "defence", "troop_type": "infantry", "buff": "+20% Defense (Skill 5)",               "gen_introduced": 1},
+    {"name": "Logan",      "role": "defence", "troop_type": "infantry", "buff": "Frontline HP Scaling & Self-Healing", "gen_introduced": 3},
+    {"name": "Ahmose",     "role": "defence", "troop_type": "infantry", "buff": "Frontline Shield & Counter-strike",    "gen_introduced": 4},
+    {"name": "Hector",     "role": "defence", "troop_type": "infantry", "buff": "+20% Infantry HP & Shield",            "gen_introduced": 4},
+    {"name": "Wu Ming",    "role": "defence", "troop_type": "infantry", "buff": "Infantry Absolute Shield",             "gen_introduced": 6},
+    {"name": "Gatot",      "role": "defence", "troop_type": "infantry", "buff": "Lancer Breaker & Momentum",            "gen_introduced": 7},
+    {"name": "Edith",      "role": "defence", "troop_type": "infantry", "buff": "Frontline Defensive Aegis & Shielding","gen_introduced": 7},
+    {"name": "Bradley",    "role": "defence", "troop_type": "infantry", "buff": "Infantry Block & Counter-blow",        "gen_introduced": 7},
+    {"name": "Magnus",     "role": "defence", "troop_type": "infantry", "buff": "Ironclad Defense & Sustain",           "gen_introduced": 9},
 
-    # Defense Buffers
-    {"name": "Patrick",    "role": "defence", "buff": "+25% HP (Skill 5)",                    "gen_introduced": 1},
-    {"name": "Sergey",     "role": "defence", "buff": "+20% Defense (Skill 5)",               "gen_introduced": 1},
-    {"name": "Ling Xue",   "role": "defence", "buff": "+20% Defense (Skill 5)",               "gen_introduced": 1},
-    {"name": "Philly",     "role": "defence", "buff": "Continuous Rally Health Regeneration", "gen_introduced": 2},
-    {"name": "Flint",      "role": "defence", "buff": "+20% Infantry Defense & Burn",         "gen_introduced": 2},
-    {"name": "Ahmose",     "role": "defence", "buff": "Frontline Shield & Counter-strike",    "gen_introduced": 4},
-    {"name": "Hector",     "role": "defence", "buff": "+20% Infantry HP & Shield",            "gen_introduced": 4},
-    {"name": "Wu Ming",    "role": "defence", "buff": "Infantry Absolute Shield",             "gen_introduced": 6},
-    {"name": "Edith",      "role": "defence", "buff": "Frontline Defensive Aegis & Shielding","gen_introduced": 7},
-    {"name": "Bradley",    "role": "defence", "buff": "Infantry Block & Counter-blow",        "gen_introduced": 7},
-    {"name": "Gordon",     "role": "defence", "buff": "Lancer Charge & Armor Vulnerability",  "gen_introduced": 7},
-    {"name": "Gatot",      "role": "defence", "buff": "Lancer Breaker & Momentum",            "gen_introduced": 8},
-    {"name": "Sonya",      "role": "defence", "buff": "Lancer Defense & Armor Reinforcement", "gen_introduced": 8},
-    {"name": "Magnus",     "role": "defence", "buff": "Ironclad Defense & Sustain",           "gen_introduced": 9},
+    # Lancer Heroes
+    {"name": "Jessie",     "role": "attack",  "troop_type": "lancer",   "buff": "+25% Damage Dealt (Skill 5)",          "gen_introduced": 1},
+    {"name": "Molly",      "role": "caller",  "troop_type": "lancer",   "buff": "+15% Skill Damage & Stun",             "gen_introduced": 1},
+    {"name": "Philly",     "role": "defence", "troop_type": "lancer",   "buff": "Continuous Rally Health Regeneration", "gen_introduced": 2},
+    {"name": "Mia",        "role": "attack",  "troop_type": "lancer",   "buff": "+20% Lancer Damage & Strike",          "gen_introduced": 3},
+    {"name": "Reina",      "role": "attack",  "troop_type": "lancer",   "buff": "Normal Attack Damage Multiplier",     "gen_introduced": 4},
+    {"name": "Norah",      "role": "attack",  "troop_type": "lancer",   "buff": "Enemy Damage Reduction & Attack boost","gen_introduced": 5},
+    {"name": "Renee",      "role": "attack",  "troop_type": "lancer",   "buff": "Lancer Cavalry Penetration",           "gen_introduced": 6},
+    {"name": "Gordon",     "role": "defence", "troop_type": "lancer",   "buff": "Lancer Charge & Armor Vulnerability",  "gen_introduced": 7},
+    {"name": "Hendrik",    "role": "attack",  "troop_type": "lancer",   "buff": "Lethality boost & Ranged Amplification","gen_introduced": 8},
+    {"name": "Sonya",      "role": "defence", "troop_type": "lancer",   "buff": "Lancer Defense & Armor Reinforcement", "gen_introduced": 8},
+    {"name": "Fred",       "role": "attack",  "troop_type": "lancer",   "buff": "Lancer Critical Surge",                "gen_introduced": 9},
 
-    # Callers & Utility
-    {"name": "Jeronimo",   "role": "caller",  "buff": "+15% Rally Attack & Stun",             "gen_introduced": 1},
-    {"name": "Natalia",    "role": "caller",  "buff": "+15% Rally Defense & Stun",            "gen_introduced": 1},
-    {"name": "Molly",      "role": "caller",  "buff": "+15% Skill Damage & Stun",             "gen_introduced": 1},
-    {"name": "Zinman",     "role": "caller",  "buff": "Defense & Rally March Speed",          "gen_introduced": 1},
+    # Marksman Heroes
+    {"name": "Jasser",     "role": "attack",  "troop_type": "marksman", "buff": "+25% Damage Dealt (Skill 5)",          "gen_introduced": 1},
+    {"name": "Seoyoon",    "role": "attack",  "troop_type": "marksman", "buff": "+25% Attack (Skill 5)",                "gen_introduced": 1},
+    {"name": "Bahiti",     "role": "attack",  "troop_type": "marksman", "buff": "+20% Marksman Precision",             "gen_introduced": 1},
+    {"name": "Zinman",     "role": "caller",  "troop_type": "marksman", "buff": "Defense & Rally March Speed",          "gen_introduced": 1},
+    {"name": "Patrick",    "role": "defence", "troop_type": "marksman", "buff": "+25% HP (Skill 5)",                    "gen_introduced": 1},
+    {"name": "Alonso",     "role": "attack",  "troop_type": "marksman", "buff": "AoE Burst & Backline Disruption",      "gen_introduced": 2},
+    {"name": "Greg",       "role": "attack",  "troop_type": "marksman", "buff": "+20% Marksman Attack",                 "gen_introduced": 3},
+    {"name": "Lynn",       "role": "attack",  "troop_type": "marksman", "buff": "Marksman Critical Boost",              "gen_introduced": 4},
+    {"name": "Gwen",       "role": "attack",  "troop_type": "marksman", "buff": "Backline Armor Piercing",            "gen_introduced": 5},
+    {"name": "Wayne",      "role": "attack",  "troop_type": "marksman", "buff": "+25% Rally Attack & Shield",           "gen_introduced": 6},
+    {"name": "Xura",       "role": "attack",  "troop_type": "marksman", "buff": "+25% Marksman Penetration DPS",       "gen_introduced": 7},
+    {"name": "Blanchette", "role": "attack",  "troop_type": "marksman", "buff": "Marksman Vulnerability & Critical Stun","gen_introduced": 10},
+    {"name": "Teresa",     "role": "attack",  "troop_type": "marksman", "buff": "Marksman Lethality Amplification",     "gen_introduced": 10},
 ]
 
 HERO_PRESETS = [
@@ -1290,6 +1296,7 @@ async def handle_calculate_rallies(request: web.Request) -> web.Response:
         rally_count = int(data.get("rally_count", 3))
         generation = int(data.get("generation", 1))
         online_only = bool(data.get("online_only", True))
+        rally_captains = data.get("rally_captains") or []
     except Exception:
         return web.json_response({"error": "Invalid JSON payload"}, status=400)
         
@@ -1337,7 +1344,8 @@ async def handle_calculate_rallies(request: web.Request) -> web.Response:
         scope=scope,
         alliance_tag=alliance_tag,
         online_only=online_only,
-        attendance=attendance_set
+        attendance=attendance_set,
+        rally_captains=rally_captains
     )
     
     # Optionally post to Discord channel if requested by user logic
