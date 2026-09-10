@@ -234,10 +234,12 @@ async function fetchApi(url, options = {}) {
       headers,
     });
     if (res.status === 401) {
-      state.user = { authenticated: false, role: 'guest', name: null };
-      renderAuth();
-      openAuthModal();
-      throw new Error('Authentication required');
+      if (!url.includes('/api/auth/login') && !url.includes('/api/auth/me')) {
+        state.user = { authenticated: false, role: 'guest', name: null };
+        renderAuth();
+        openAuthModal();
+        throw new Error('Authentication required');
+      }
     }
     const text = await res.text();
     let data;
@@ -349,13 +351,19 @@ function renderAuth() {
 
 
 function openAuthModal() {
-  elements.authModal.classList.add('active');
-  elements.authPasskeyInput.value = '';
-  elements.authPasskeyInput.focus();
+  if (elements.authModal) {
+    elements.authModal.classList.add('active');
+    if (elements.authPasskeyInput) {
+      elements.authPasskeyInput.value = '';
+      elements.authPasskeyInput.focus();
+    }
+  }
 }
 
 function closeAuthModal() {
-  elements.authModal.classList.remove('active');
+  if (elements.authModal) {
+    elements.authModal.classList.remove('active');
+  }
 }
 
 function openSurveyModal() {
@@ -1782,40 +1790,58 @@ function initEventListeners() {
   });
 
   // Auth Button
-  elements.btnAuthAction.addEventListener('click', async () => {
-    if (state.user.authenticated) {
-      await fetchApi('/api/auth/logout', { method: 'POST' });
-      state.user = { authenticated: false, role: 'guest', name: null };
-      renderAuth();
-      showToast('Logged out successfully', 'info');
-    } else {
-      openAuthModal();
-    }
-  });
+  if (elements.btnAuthAction) {
+    elements.btnAuthAction.addEventListener('click', async () => {
+      if (state.user.authenticated) {
+        await fetchApi('/api/auth/logout', { method: 'POST' });
+        state.user = { authenticated: false, role: 'guest', name: null };
+        renderAuth();
+        showToast('Logged out successfully', 'info');
+      } else {
+        openAuthModal();
+      }
+    });
+  }
 
-  elements.authCloseBtn.addEventListener('click', closeAuthModal);
-  elements.authForm.addEventListener('submit', async (e) => {
-    e.preventDefault();
-    const passkey = elements.authPasskeyInput.value;
-    try {
-      const res = await fetchApi('/api/auth/login', {
-        method: 'POST',
-        body: JSON.stringify({ passkey }),
-      });
-      state.user = { authenticated: true, role: res.role, name: res.name };
-      renderAuth();
-      closeAuthModal();
-      showToast(`Welcome back, ${res.name}!`, 'success');
-      loadStats();
-      loadPlayers();
-    } catch (err) {
-      showToast(err.message, 'error');
-    }
-  });
+  if (elements.authModal) {
+    elements.authModal.addEventListener('click', (e) => {
+      if (e.target === elements.authModal) closeAuthModal();
+    });
+  }
 
-  elements.btnQuickCalculate.addEventListener('click', () => switchTab('simulator'));
-  elements.btnQuickAddPlayer.addEventListener('click', openAddPlayerModal);
-  elements.btnAddPlayer.addEventListener('click', openAddPlayerModal);
+  if (elements.authCloseBtn) {
+    elements.authCloseBtn.addEventListener('click', closeAuthModal);
+  }
+  if (elements.authForm) {
+    elements.authForm.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const passkey = elements.authPasskeyInput ? elements.authPasskeyInput.value : '';
+      try {
+        const res = await fetchApi('/api/auth/login', {
+          method: 'POST',
+          body: JSON.stringify({ passkey }),
+        });
+        state.user = { authenticated: true, role: res.role, name: res.name };
+        renderAuth();
+        closeAuthModal();
+        showToast(`Welcome back, ${res.name}!`, 'success');
+        loadStats();
+        loadPlayers();
+      } catch (err) {
+        showToast(err.message || 'Login failed', 'error');
+      }
+    });
+  }
+
+  if (elements.btnQuickCalculate) {
+    elements.btnQuickCalculate.addEventListener('click', () => switchTab('simulator'));
+  }
+  if (elements.btnQuickAddPlayer) {
+    elements.btnQuickAddPlayer.addEventListener('click', openAddPlayerModal);
+  }
+  if (elements.btnAddPlayer) {
+    elements.btnAddPlayer.addEventListener('click', openAddPlayerModal);
+  }
 
   // Survey Generator Modal
   if (elements.btnSurveyGenerator) {
@@ -2185,8 +2211,12 @@ function initEventListeners() {
     });
   }
 
-  elements.btnRunSim.addEventListener('click', runSimulation);
-  elements.btnSaveRules.addEventListener('click', saveRules);
+  if (elements.btnRunSim) {
+    elements.btnRunSim.addEventListener('click', runSimulation);
+  }
+  if (elements.btnSaveRules) {
+    elements.btnSaveRules.addEventListener('click', saveRules);
+  }
 }
 
 // ==========================================
