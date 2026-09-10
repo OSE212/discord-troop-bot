@@ -26,6 +26,7 @@ from __future__ import annotations
 import math
 
 from bot.database.models.player import TroopType
+from bot.recommendations.hero_data import HERO_BUFF_DESCRIPTIONS
 from bot.optimizer.ranking import score_contribution
 from bot.optimizer.ratio import compute_actual_ratio, compute_deviation, compute_targets
 from bot.optimizer.types import (

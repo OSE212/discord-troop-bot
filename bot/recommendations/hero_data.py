@@ -15,6 +15,29 @@ from typing import List, Tuple
 UNIVERSAL_JOINERS = ["Jessie", "Jasser", "Seo-yoon"]
 GARRISON_UNIVERSAL_JOINERS = ["Sergey", "Patrick", "Ahmose"]
 
+HERO_BUFF_DESCRIPTIONS: dict[str, str] = {
+    "jessie": "+25% Damage Dealt (Offensive Rally Joiner)",
+    "jasser": "+25% Attack (Offensive Rally Joiner)",
+    "seo-yoon": "+25% Attack / Damage (Offensive Rally Joiner)",
+    "sergey": "-20% Damage Taken (Garrison Defense Joiner)",
+    "patrick": "+25% Max HP (Garrison Defense Joiner)",
+    "ahmose": "-15% Damage Taken & Shield (Defensive Joiner)",
+    "jeronimo": "+25% Attack & Rally Damage Boost",
+    "molly": "+15% Stun Chance & Flank Attack",
+    "flint": "+20% Defense & Shield Frontline",
+    "alonso": "+20% Marksman Crit & Snipe",
+    "mia": "+25% Single-Target DPS & Skill Boost",
+    "philly": "+20% Garrison Defense & Health",
+    "lynn": "+20% Marksman Precision & Lethality",
+    "norah": "+25% Lancer Combined Arms Buff",
+    "wayne": "+20% Marksman Armor Penetration",
+    "wu ming": "+25% Infantry Frontline Resistance",
+    "gatot": "+20% Counter-Attack & Defense",
+    "hendrik": "+20% Spear Charge & Attack",
+    "xura": "+25% Marksman Penetration DPS",
+    "edith": "+20% Garrison Stun & Counter Damage",
+}
+
 # (min_gen, captain_infantry, captain_lancer, captain_marksman, 4th_joiner_offense, 4th_joiner_garrison)
 _HERO_TABLE: List[Tuple[int, str, str, str, str, str]] = [
     # gen, inf_cap, lan_cap, mrk_cap, 4th_off_joiner, 4th_def_joiner

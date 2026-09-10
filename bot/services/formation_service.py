@@ -5,8 +5,9 @@ Calculation never writes to player registration data (spec section
 9) -- this service only reads players and produces an in-memory
 FormationResult.
 """
-from bot.optimizer.optimizer import HERO_BUFF_DESCRIPTIONS
 from __future__ import annotations
+
+from bot.optimizer.optimizer import HERO_BUFF_DESCRIPTIONS
 
 from bot.database.models.player import Player, TroopType
 from bot.database.repositories.player_repository import PlayerRepository

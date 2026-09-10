@@ -53,10 +53,9 @@ class FormationRequest:
     mode: Mode
     formation_type: FormationType
     ratio: dict[TroopType, float]  # percentages, must sum to 100
+    capacity: int
     captain_id: int | None = None
     captain_heroes: tuple[str, ...] = ()
-    # pyrefly: ignore [bad-class-definition]
-    capacity: int
     target_joiners: tuple[str, ...] = ()
 
 
