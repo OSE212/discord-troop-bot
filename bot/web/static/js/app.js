@@ -914,39 +914,6 @@ function syncRatio(source, val) {
   updateRatioBadge();
 }
 
-// Simulator Calculation - branches based on Rally vs Garrison
-async function runSimulation() {
-  const formationType = state.sim.formation_type;
-
-  // Get scope from new toggle
-  const scopeToggle = document.getElementById('sim-scope-toggle');
-  const scope = scopeToggle?.querySelector('.segment-btn.active')?.dataset.value || 'state';
-  const genSelect = document.getElementById('sim-gen-select');
-  const generation = parseInt(genSelect?.value || '7', 10) || 7;
-
-  // Both modes require online players
-  if (!window.warRoomAttendance || window.warRoomAttendance.size === 0) {
-    showToast('No players checked in! Go to the Roster tab and mark players as online first.', 'error');
-    return;
-  }
-
-  if (formationType === 'rally') {
-    // --- MULTI-RALLY AUTO ASSIGNMENT ---
-    const rallyCount = parseInt(document.getElementById('sim-rally-count')?.value || '3', 10);
-
-    elements.btnRunSim.disabled = true;
-    elements.btnRunSim.innerHTML = '<span>⏳</span> Calculating...';
-    try {
-      const res = await fetchApi('/api/rallies/calculate', {
-        method: 'POST',
-        body: JSON.stringify({
-          rally_count: rallyCount,
-          generation: generation,
-          event_scope: scope,
-          online_only: true,
-          post_to_discord: false,
-        }),
-      });
 function getCaptainPayloadData() {
   const formationType = state.sim.formation_type || 'rally';
   const rallyCountEl = document.getElementById('sim-rally-count');
