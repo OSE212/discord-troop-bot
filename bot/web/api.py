@@ -916,6 +916,19 @@ async def handle_calculate(request: web.Request) -> web.Response:
     if isinstance(raw_joiners, list):
         target_joiners = [str(h).strip() for h in raw_joiners if str(h).strip()]
 
+    raw_cap_id = data.get("captain_id")
+    captain_id: Optional[int] = None
+    if raw_cap_id is not None and str(raw_cap_id).strip() != "":
+        try:
+            captain_id = int(raw_cap_id)
+        except ValueError:
+            captain_id = None
+
+    raw_cap_heroes = data.get("captain_heroes") or []
+    captain_heroes: list[str] = []
+    if isinstance(raw_cap_heroes, list):
+        captain_heroes = [str(h).strip() for h in raw_cap_heroes if str(h).strip()]
+
     alliance_tag_filter = str(data.get("alliance_tag", "")).strip()
 
     db = request.app["db"]
@@ -930,11 +943,12 @@ async def handle_calculate(request: web.Request) -> web.Response:
                 formation_type=formation_type,
                 ratio=ratio,
                 capacity=capacity,
+                captain_id=captain_id,
+                captain_heroes=captain_heroes,
                 target_joiners=target_joiners,
                 guild_id=target_guild if target_guild and target_guild != "*" else None,
                 alliance_tag=alliance_tag_filter or None,
             )
-
 
         except (InvalidRatioError, InvalidCapacityError) as exc:
             return web.json_response({"error": str(exc)}, status=400)
@@ -969,10 +983,22 @@ async def handle_calculate(request: web.Request) -> web.Response:
             for jr in (result.joiners or [])
         ]
 
+        from bot.recommendations.hero_data import HERO_BUFF_DESCRIPTIONS
+        cap_hero_buffs = [
+            {
+                "hero": h,
+                "buff": HERO_BUFF_DESCRIPTIONS.get(h.lower(), "Expedition Skill Buff")
+            }
+            for h in captain_heroes
+        ]
+
         return web.json_response({
             "mode": mode.value,
             "formation_type": formation_type.value,
             "capacity": capacity,
+            "captain_id": captain_id,
+            "captain_heroes": captain_heroes,
+            "captain_hero_buffs": cap_hero_buffs,
             "base_capacity": base_cap,
             "target_capacity": target_cap,
             "garrison_gap": garrison_gap,

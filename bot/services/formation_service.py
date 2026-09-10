@@ -68,6 +68,8 @@ class FormationService:
         formation_type: FormationType,
         ratio: dict[TroopType, float],
         capacity: int,
+        captain_id: Optional[int] = None,
+        captain_heroes: Optional[list[str]] = None,
         target_joiners: Optional[list[str]] = None,
         guild_id: Optional[str] = None,
         alliance_tag: Optional[str] = None,
@@ -77,6 +79,8 @@ class FormationService:
             formation_type=formation_type,
             ratio=ratio,
             capacity=capacity,
+            captain_id=captain_id,
+            captain_heroes=tuple(captain_heroes or ()),
             target_joiners=tuple(target_joiners or ()),
         )
         all_players = self.repository.list_all(guild_id=guild_id, alliance_tag=alliance_tag)

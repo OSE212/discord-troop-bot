@@ -153,6 +153,14 @@ const elements = {
   simPresetNotes: null,
   simJoinersCard: document.getElementById('sim-joiners-card'),
   simJoinersList: document.getElementById('sim-joiners-list'),
+  // Captain & Captain Heroes (Simulator)
+  simCaptainSelect: document.getElementById('sim-captain-select'),
+  simCaptainHero1: document.getElementById('sim-captain-hero-1'),
+  simCaptainHero2: document.getElementById('sim-captain-hero-2'),
+  simCaptainHero3: document.getElementById('sim-captain-hero-3'),
+  simCaptainBuff1: document.getElementById('sim-captain-buff-1'),
+  simCaptainBuff2: document.getElementById('sim-captain-buff-2'),
+  simCaptainBuff3: document.getElementById('sim-captain-buff-3'),
   // Target Hero Slots (Simulator)
   simHeroSlot1: document.getElementById('sim-hero-slot-1'),
   simHeroSlot2: document.getElementById('sim-hero-slot-2'),
@@ -546,9 +554,27 @@ async function loadPlayers() {
     if (countEl) countEl.textContent = window.warRoomAttendance.size;
 
     renderRoster();
+    populateCaptainSelect();
   } catch (err) {
     elements.rosterTableBody.innerHTML = `<tr><td colspan="9" class="empty-cell text-danger">Failed to load players: ${err.message}</td></tr>`;
   }
+}
+
+function populateCaptainSelect() {
+  const sel = elements.simCaptainSelect;
+  if (!sel) return;
+  const currentVal = sel.value;
+  sel.innerHTML = '<option value="">Auto / Highest Power Player</option>';
+
+  const players = state.players || [];
+  players.forEach(p => {
+    const opt = document.createElement('option');
+    opt.value = p.id;
+    opt.textContent = `${p.name} (March Limit: ${formatNumber(p.march_limit)})`;
+    sel.appendChild(opt);
+  });
+
+  sel.value = currentVal;
 }
 
 
@@ -924,15 +950,28 @@ function renderMultiRallyInSim(rallies) {
         <table class="data-table">
           <thead><tr><th>Player</th><th>Infantry</th><th>Lancers</th><th>Marksman</th><th>Total March</th><th>Notes</th></tr></thead>
           <tbody>
-            ${(rally.players || []).map(p => `
-              <tr>
-                <td><strong>${escapeHtml(p.player_name)}</strong></td>
-                <td style="color:var(--troop-inf);">${p.infantry_count.toLocaleString()}</td>
-                <td style="color:var(--troop-lan);">${p.lancer_count.toLocaleString()}</td>
-                <td style="color:var(--troop-mrk);">${p.marksman_count.toLocaleString()}</td>
-                <td>${p.march_limit.toLocaleString()}</td>
-                <td>${p.tactical_note ? `<span style="color:var(--color-amber);font-size:12px;">${p.tactical_note}</span>` : ''}</td>
-              </tr>`).join('')}
+            ${(rally.players || []).map((p, idx) => {
+              let roleBadge = '';
+              let heroNote = '';
+              if (idx === 0) {
+                roleBadge = `<span style="background:rgba(255,180,0,0.18); border:1px solid var(--color-amber); color:var(--color-amber); border-radius:4px; padding:2px 6px; font-size:11px; font-weight:700; margin-right:6px;">👑 Captain</span>`;
+              } else if (idx <= 4) {
+                roleBadge = `<span style="background:rgba(0,242,254,0.12); border:1px solid var(--color-cyan); color:var(--color-cyan); border-radius:4px; padding:2px 6px; font-size:11px; font-weight:600; margin-right:6px;">Slot ${idx} Joiner</span>`;
+                const firstHero = p.recommended_joiners ? p.recommended_joiners[0] : '';
+                if (firstHero) heroNote = `<span style="font-size:11px; color:var(--color-cyan); font-weight:600;">[Hero 1: ${escapeHtml(firstHero)}]</span> `;
+              } else {
+                roleBadge = `<span style="background:rgba(255,255,255,0.05); color:var(--text-muted); border-radius:4px; padding:2px 6px; font-size:11px; margin-right:6px;">Joiner</span>`;
+              }
+              return `
+                <tr>
+                  <td>${roleBadge}<strong>${escapeHtml(p.player_name)}</strong> ${heroNote}</td>
+                  <td style="color:var(--troop-inf); font-weight:600;">${p.infantry_count.toLocaleString()}</td>
+                  <td style="color:var(--troop-lan); font-weight:600;">${p.lancer_count.toLocaleString()}</td>
+                  <td style="color:var(--troop-mrk); font-weight:600;">${p.marksman_count.toLocaleString()}</td>
+                  <td>${p.march_limit.toLocaleString()}</td>
+                  <td>${p.tactical_note ? `<span style="color:var(--color-amber);font-size:12px;">${p.tactical_note}</span>` : ''}</td>
+                </tr>`;
+            }).join('')}
           </tbody>
         </table>
       </div>`;
@@ -1075,19 +1114,58 @@ function renderSimResult() {
     // Group by player_name
     const byPlayer = {};
     res.allocations.forEach(a => {
-      if (!byPlayer[a.player_name]) byPlayer[a.player_name] = { infantry: 0, lancers: 0, marksman: 0, total: 0 };
+      if (!byPlayer[a.player_name]) byPlayer[a.player_name] = { infantry: 0, lancers: 0, marksman: 0, total: 0, player_id: a.player_id };
       const key = a.troop_type.toLowerCase();
       byPlayer[a.player_name][key] = (byPlayer[a.player_name][key] || 0) + a.amount;
       byPlayer[a.player_name].total += a.amount;
     });
-    elements.simAssignmentsTbody.innerHTML = Object.entries(byPlayer).map(([name, t]) => `
-      <tr>
-        <td><strong>${escapeHtml(name)}</strong></td>
-        <td style="color:var(--troop-inf)">${formatNumber(t.infantry)}</td>
-        <td style="color:var(--troop-lan)">${formatNumber(t.lancers)}</td>
-        <td style="color:var(--troop-mrk)">${formatNumber(t.marksman)}</td>
-        <td><strong>${formatNumber(t.total)}</strong></td>
-      </tr>`).join('');
+
+    const joinerRecs = res.joiner_recommendations || [];
+
+    const rows = Object.entries(byPlayer).map(([name, t], idx) => {
+      let roleBadge = '';
+      let heroInfo = '';
+
+      const isCaptain = (res.captain_id && t.player_id === res.captain_id) || (idx === 0);
+
+      if (isCaptain) {
+        roleBadge = `<span style="background:rgba(255,180,0,0.18); border:1px solid var(--color-amber); color:var(--color-amber); border-radius:4px; padding:2px 6px; font-size:11px; font-weight:700; margin-right:6px;">👑 Captain</span>`;
+        if (res.captain_hero_buffs && res.captain_hero_buffs.length > 0) {
+          const capBuffs = res.captain_hero_buffs.map(b => `<strong>${escapeHtml(b.hero)}</strong> (${escapeHtml(b.buff)})`).join(' • ');
+          heroInfo = `<div style="font-size:11px; color:var(--text-secondary); margin-top:3px;">Heroes: ${capBuffs}</div>`;
+        }
+      } else {
+        const joinerIndex = isCaptain ? idx - 1 : idx;
+        if (joinerIndex >= 0 && joinerIndex < 4) {
+          const joinerRec = joinerRecs[joinerIndex];
+          const heroName = joinerRec ? joinerRec.hero_name : (state.sim.heroes[joinerIndex] || '');
+          const buffDesc = joinerRec ? joinerRec.buff_description : '';
+
+          roleBadge = `<span style="background:rgba(0,242,254,0.12); border:1px solid var(--color-cyan); color:var(--color-cyan); border-radius:4px; padding:2px 6px; font-size:11px; font-weight:600; margin-right:6px;">Slot ${joinerIndex + 1} Joiner</span>`;
+          if (heroName) {
+            heroInfo = `<div style="font-size:11px; color:var(--text-secondary); margin-top:3px;">1st Hero: <strong>${escapeHtml(heroName)}</strong> ${buffDesc ? `<span style="color:var(--color-cyan);">(${escapeHtml(buffDesc)})</span>` : ''}</div>`;
+          }
+        } else {
+          roleBadge = `<span style="background:rgba(255,255,255,0.05); color:var(--text-muted); border-radius:4px; padding:2px 6px; font-size:11px; margin-right:6px;">Joiner</span>`;
+        }
+      }
+
+      return `
+        <tr>
+          <td>
+            <div style="display:flex; align-items:center; flex-wrap:wrap;">
+              ${roleBadge}<strong>${escapeHtml(name)}</strong>
+            </div>
+            ${heroInfo}
+          </td>
+          <td style="color:var(--troop-inf); font-weight:600;">${formatNumber(t.infantry)}</td>
+          <td style="color:var(--troop-lan); font-weight:600;">${formatNumber(t.lancers)}</td>
+          <td style="color:var(--troop-mrk); font-weight:600;">${formatNumber(t.marksman)}</td>
+          <td><strong>${formatNumber(t.total)}</strong></td>
+        </tr>`;
+    }).join('');
+
+    elements.simAssignmentsTbody.innerHTML = rows;
   }
 
   // Top 4 Joiners
@@ -1148,9 +1226,79 @@ async function loadHeroes() {
     state.heroCatalog = res.heroes || [];
     state.heroPresets = res.presets || [];
     populateHeroSlotDropdowns();
+    populateCaptainHeroDropdowns();
   } catch (err) {
     console.error('Failed to load heroes:', err);
   }
+}
+
+function populateCaptainHeroDropdowns() {
+  const slotSelects = [
+    elements.simCaptainHero1,
+    elements.simCaptainHero2,
+    elements.simCaptainHero3,
+  ];
+
+  if (!slotSelects[0]) return;
+
+  const defaultHeroes = ['Jeronimo', 'Molly', 'Bahiti'];
+
+  slotSelects.forEach((sel, idx) => {
+    if (!sel) return;
+    const cur = sel.value || defaultHeroes[idx];
+    sel.innerHTML = '';
+
+    if (state.heroCatalog && state.heroCatalog.length > 0) {
+      state.heroCatalog.forEach(h => {
+        const opt = document.createElement('option');
+        opt.value = h.name;
+        opt.textContent = `${h.name} (${h.buff})`;
+        sel.appendChild(opt);
+      });
+    } else {
+      ['Jeronimo', 'Molly', 'Bahiti', 'Flint', 'Alonso', 'Mia', 'Philly', 'Lynn', 'Norah', 'Wayne', 'Wu Ming', 'Gatot', 'Hendrik', 'Xura', 'Edith', 'Jessie', 'Jasser', 'Seoyoon', 'Sergey', 'Patrick', 'Ahmose'].forEach(name => {
+        const opt = document.createElement('option');
+        opt.value = name;
+        opt.textContent = name;
+        sel.appendChild(opt);
+      });
+    }
+
+    sel.value = cur;
+    if (!sel.value && sel.options.length > 0) sel.selectedIndex = 0;
+    sel.onchange = () => updateCaptainHeroBuffNotes();
+  });
+
+  updateCaptainHeroBuffNotes();
+}
+
+function updateCaptainHeroBuffNotes() {
+  const slotSelects = [
+    elements.simCaptainHero1,
+    elements.simCaptainHero2,
+    elements.simCaptainHero3,
+  ];
+  const buffLabels = [
+    elements.simCaptainBuff1,
+    elements.simCaptainBuff2,
+    elements.simCaptainBuff3,
+  ];
+
+  slotSelects.forEach((sel, i) => {
+    if (!sel || !buffLabels[i]) return;
+    const heroName = sel.value;
+    const heroObj = state.heroCatalog ? state.heroCatalog.find(h => h.name.toLowerCase() === (heroName || '').toLowerCase()) : null;
+    const buff = heroObj ? heroObj.buff : 'Expedition Skill Buff';
+    buffLabels[i].textContent = buff;
+  });
+}
+
+function getSelectedCaptainHeroes() {
+  return [
+    elements.simCaptainHero1?.value || '',
+    elements.simCaptainHero2?.value || '',
+    elements.simCaptainHero3?.value || '',
+  ].filter(Boolean);
 }
 
 function populateHeroSlotDropdowns(maxGen) {
