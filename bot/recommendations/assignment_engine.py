@@ -77,6 +77,7 @@ class MultiRallyAssignmentEngine:
         rally_count: int,
         generation: int,
         scope: EventScope = EventScope.STATE,
+        alliance_tag: Optional[str] = None,
         online_only: bool = True,
         attendance: Optional[set] = None,
         rally_captains: Optional[List[Dict[str, Any]]] = None,

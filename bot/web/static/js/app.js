@@ -615,18 +615,25 @@ function renderCaptainSelectionBlocks() {
   };
 
   const players = state.players || [];
-  let playerOptionsHtml = '<option value="">Auto / Highest Power Player</option>';
-  players.forEach(p => {
-    const isOnline = window.warRoomAttendance ? window.warRoomAttendance.has(p.id) : true;
-    if (isOnline) {
-      playerOptionsHtml += `<option value="${p.id}">${escapeHtml(p.name)} (March: ${formatNumber(p.march_limit)})</option>`;
-    }
-  });
+  const makePlayerOptionsHtml = (filterQuery = '') => {
+    let html = '<option value="">Auto / Highest Power Player</option>';
+    const query = filterQuery.toLowerCase().trim();
+    players.forEach(p => {
+      const isOnline = window.warRoomAttendance ? window.warRoomAttendance.has(p.id) : true;
+      if (isOnline) {
+        if (!query || p.name.toLowerCase().includes(query)) {
+          html += `<option value="${p.id}">${escapeHtml(p.name)} (March: ${formatNumber(p.march_limit)})</option>`;
+        }
+      }
+    });
+    return html;
+  };
 
-  // Collect current selections before re-rendering HTML
+  // Collect current selections & search queries before re-rendering HTML
   const prevSelections = [];
   for (let i = 1; i <= count; i++) {
     prevSelections.push({
+      search: document.getElementById(`sim-captain-search-${i}`)?.value || '',
       cap: document.getElementById(`sim-captain-select-${i}`)?.value || '',
       inf: document.getElementById(`sim-captain-hero-inf-${i}`)?.value || '',
       lan: document.getElementById(`sim-captain-hero-lan-${i}`)?.value || '',
@@ -641,6 +648,8 @@ function renderCaptainSelectionBlocks() {
       ? 'Garrison Captain & 3 Heroes'
       : (count > 1 ? `Rally ${i} Captain & 3 Heroes` : 'Rally Captain & 3 Heroes');
 
+    const curSearch = prevSelections[i - 1]?.search || '';
+
     blocksHtml += `
       <div class="form-group captain-selection-block" style="background:rgba(255,255,255,0.02); padding:14px; border-radius:8px; border:1px solid var(--border-color); margin-bottom:16px;">
         <div class="label-with-meta" style="margin-bottom:10px;">
@@ -648,9 +657,14 @@ function renderCaptainSelectionBlocks() {
           <span class="form-section-hint">Infantry (Left) | Lancer (Mid) | Marksman (Right) — Gen ≤ ${selectedGen}</span>
         </div>
         
+        <!-- Search bar for filtering captain dropdown -->
+        <div style="margin-bottom:8px;">
+          <input type="text" class="form-input sim-captain-search-input" id="sim-captain-search-${i}" data-index="${i}" placeholder="🔍 Search captain by player name..." value="${escapeHtml(curSearch)}" style="font-size:12px; height:34px; background:rgba(0,0,0,0.25);">
+        </div>
+
         <div style="margin-bottom:10px;">
           <select class="form-input sim-captain-select-input" id="sim-captain-select-${i}" data-index="${i}">
-            ${playerOptionsHtml}
+            ${makePlayerOptionsHtml(curSearch)}
           </select>
         </div>
 
@@ -682,17 +696,30 @@ function renderCaptainSelectionBlocks() {
 
   for (let i = 1; i <= count; i++) {
     const prev = prevSelections[i - 1];
-    if (!prev) continue;
 
+    const searchInput = document.getElementById(`sim-captain-search-${i}`);
     const capEl = document.getElementById(`sim-captain-select-${i}`);
     const infEl = document.getElementById(`sim-captain-hero-inf-${i}`);
     const lanEl = document.getElementById(`sim-captain-hero-lan-${i}`);
     const mrkEl = document.getElementById(`sim-captain-hero-mrk-${i}`);
 
-    if (capEl && prev.cap && capEl.querySelector(`option[value="${prev.cap}"]`)) capEl.value = prev.cap;
-    if (infEl && prev.inf && infEl.querySelector(`option[value="${prev.inf}"]`)) infEl.value = prev.inf;
-    if (lanEl && prev.lan && lanEl.querySelector(`option[value="${prev.lan}"]`)) lanEl.value = prev.lan;
-    if (mrkEl && prev.mrk && mrkEl.querySelector(`option[value="${prev.mrk}"]`)) mrkEl.value = prev.mrk;
+    if (prev) {
+      if (capEl && prev.cap && capEl.querySelector(`option[value="${prev.cap}"]`)) capEl.value = prev.cap;
+      if (infEl && prev.inf && infEl.querySelector(`option[value="${prev.inf}"]`)) infEl.value = prev.inf;
+      if (lanEl && prev.lan && lanEl.querySelector(`option[value="${prev.lan}"]`)) lanEl.value = prev.lan;
+      if (mrkEl && prev.mrk && mrkEl.querySelector(`option[value="${prev.mrk}"]`)) mrkEl.value = prev.mrk;
+    }
+
+    if (searchInput && capEl) {
+      searchInput.addEventListener('input', (e) => {
+        const query = e.target.value.toLowerCase().trim();
+        const currentVal = capEl.value;
+        capEl.innerHTML = makePlayerOptionsHtml(query);
+        if (currentVal && capEl.querySelector(`option[value="${currentVal}"]`)) {
+          capEl.value = currentVal;
+        }
+      });
+    }
   }
 }
 
