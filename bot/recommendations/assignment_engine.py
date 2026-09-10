@@ -140,6 +140,16 @@ class MultiRallyAssignmentEngine:
             heroes = get_hero_recommendations(generation, role.value)
             ratio = heroes["ratio"]
 
+            # Support custom ratio override per rally if specified in rally_captains
+            cap_info = rally_captains[idx] if (rally_captains and idx < len(rally_captains) and isinstance(rally_captains[idx], dict)) else {}
+            custom_ratio = cap_info.get("ratio")
+            if custom_ratio and isinstance(custom_ratio, dict):
+                inf = float(custom_ratio.get("infantry", 0))
+                lan = float(custom_ratio.get("lancer", custom_ratio.get("lancers", 0)))
+                mrk = float(custom_ratio.get("marksman", 0))
+                if (inf + lan + mrk) > 0:
+                    ratio = {"infantry": inf, "lancers": lan, "marksman": mrk}
+
             rows: List[PlayerAssignmentRow] = []
             for rank, p in enumerate(group_players):
                 march = p.get("march_limit", 160000)

@@ -261,3 +261,52 @@ def test_multipart_file_upload_xlsx_and_macintosh_csv(tmp_path):
 
     asyncio.run(_test())
 
+
+def test_rallies_calculate_custom_ratios(tmp_path):
+    async def _test():
+        app, settings = create_test_app_and_settings(tmp_path)
+        server = TestServer(app)
+        client = TestClient(server)
+        await client.start_server()
+
+        try:
+            await client.post("/api/auth/login", json={"passkey": "secretpass123"})
+            csv_content = """Player Name,Account ID,March Capacity,Infantry Level,Lancer Level,Marksman Level
+Captain1,C01,150k,30,28,29
+Captain2,C02,150k,28,30,27
+Joiner1,J01,100k,25,25,25
+"""
+            await client.post("/api/players/import", json={"csv_text": csv_content})
+
+            rallies_payload = {
+                "rally_count": 2,
+                "online_only": False,
+                "rally_captains": [
+                    {
+                        "player_name": "Captain1",
+                        "ratio": {"infantry": 60, "lancers": 20, "marksman": 20}
+                    },
+                    {
+                        "player_name": "Captain2",
+                        "ratio": {"infantry": 40, "lancers": 30, "marksman": 30}
+                    }
+                ],
+                "alliance_tag": None
+            }
+            resp = await client.post("/api/rallies/calculate", json=rallies_payload)
+            assert resp.status == 200
+            data = await resp.json()
+            assert data["status"] == "success"
+            assert len(data["rallies"]) == 2
+            assert data["rallies"][0]["ratio"] == {"infantry": 60, "lancers": 20, "marksman": 20}
+            assert data["rallies"][1]["ratio"] == {"infantry": 40, "lancers": 30, "marksman": 30}
+            assert data["rallies"][0]["players"][0]["player_name"] == "Captain1"
+            assert data["rallies"][1]["players"][0]["player_name"] == "Captain2"
+        finally:
+            await client.close()
+
+    asyncio.run(_test())
+
+
+
+
