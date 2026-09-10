@@ -8,6 +8,7 @@ from bot.database.repositories.player_repository import PlayerRepository
 from bot.discord.interactions.registration_flow import parse_int
 from bot.optimizer.ratio import InvalidCapacityError, InvalidRatioError
 from bot.optimizer.types import FormationType, Mode
+from bot.optimizer.optimizer import HERO_BUFF_DESCRIPTIONS
 from bot.rules.configuration import RankingConfig
 from bot.services.formation_service import FormationService, format_result
 
@@ -30,7 +31,7 @@ class FormationTypeSelect(discord.ui.Select):
     def __init__(self):
         options = [
             discord.SelectOption(label="Rally", value=FormationType.RALLY.value),
-            discord.SelectOption(label="Garrison", value=FormationType.GARRISON.value),
+            discord.SelectOption(label="Garrison", value=FormationType.Garrison.value if hasattr(FormationType, 'Garrison') else FormationType.GARRISON.value),
         ]
         super().__init__(placeholder="Rally or Garrison?", options=options)
 
@@ -40,26 +41,69 @@ class FormationTypeSelect(discord.ui.Select):
         await view.maybe_advance(interaction)
 
 
-class CalculationSetupView(discord.ui.View):
-    """Step 1+2 of /calculate: pick Attack/Defence and Rally/Garrison,
-    then open the ratio+capacity modal (spec section 9)."""
+class CaptainSelect(discord.ui.Select):
+    def __init__(self, players: list):
+        top_players = sorted(players, key=lambda p: p.march_limit, reverse=True)[:25]
+        options = [
+            discord.SelectOption(label=p.name, value=str(p.id), description=f"March Limit: {p.march_limit:,}")
+            for p in top_players
+        ]
+        super().__init__(placeholder="Select the Rally/Garrison Captain...", options=options)
 
-    def __init__(
-        self, db: Database, config: RankingConfig, *, timeout: float = 180
-    ):
+    async def callback(self, interaction: discord.Interaction):
+        view: CalculationSetupView = self.view  # type: ignore[assignment]
+        view.captain_id = int(self.values[0])
+        await view.maybe_advance(interaction)
+
+
+class CaptainHeroSelect(discord.ui.Select):
+    def __init__(self):
+        hero_options = [
+            discord.SelectOption(
+                label=name.capitalize(),
+                value=name.lower(),
+                description=desc[:100]
+            )
+            for name, desc in list(HERO_BUFF_DESCRIPTIONS.items())[:25]
+        ]
+        super().__init__(
+            placeholder="Select Captain's 3 Heroes (Benefit Notes Attached)",
+            options=hero_options,
+            min_values=1,
+            max_values=3
+        )
+
+    async def callback(self, interaction: discord.Interaction):
+        view: CalculationSetupView = self.view  # type: ignore[assignment]
+        view.captain_heroes = self.values
+        await view.maybe_advance(interaction)
+
+
+class CalculationSetupView(discord.ui.View):
+    def __init__(self, db: Database, config: RankingConfig, players: list, *, timeout: float = 180):
         super().__init__(timeout=timeout)
         self.db = db
         self.config = config
         self.mode: Mode | None = None
         self.formation_type: FormationType | None = None
+        self.captain_id: int | None = None
+        self.captain_heroes: list[str] = []
+        
         self.add_item(ModeSelect())
         self.add_item(FormationTypeSelect())
+        if players:
+            self.add_item(CaptainSelect(players))
+        self.add_item(CaptainHeroSelect())
 
     async def maybe_advance(self, interaction: discord.Interaction):
-        if self.mode is None or self.formation_type is None:
+        if self.mode is None or self.formation_type is None or self.captain_id is None or not self.captain_heroes:
             await interaction.response.defer()
             return
-        modal = RatioCapacityModal(self.db, self.config, self.mode, self.formation_type)
+            
+        modal = RatioCapacityModal(
+            self.db, self.config, self.mode, self.formation_type, 
+            self.captain_id, self.captain_heroes
+        )
         await interaction.response.send_modal(modal)
 
 
@@ -67,18 +111,24 @@ class RatioCapacityModal(discord.ui.Modal, title="Calculate - Ratio & Capacity")
     infantry_pct = discord.ui.TextInput(label="Infantry %", required=True, max_length=8)
     lancers_pct = discord.ui.TextInput(label="Lancers %", required=True, max_length=8)
     marksman_pct = discord.ui.TextInput(label="Marksman %", required=True, max_length=8)
-    capacity = discord.ui.TextInput(
-        label="Total Formation Capacity", required=True, max_length=16
-    )
+    capacity = discord.ui.TextInput(label="Total Formation Capacity", required=True, max_length=16)
 
     def __init__(
-        self, db: Database, config: RankingConfig, mode: Mode, formation_type: FormationType
+        self, 
+        db: Database, 
+        config: RankingConfig, 
+        mode: Mode, 
+        formation_type: FormationType,
+        captain_id: int,
+        captain_heroes: list[str]
     ):
         super().__init__()
         self.db = db
         self.config = config
         self.mode = mode
         self.formation_type = formation_type
+        self.captain_id = captain_id
+        self.captain_heroes = captain_heroes
 
     async def on_submit(self, interaction: discord.Interaction):
         try:
@@ -87,9 +137,7 @@ class RatioCapacityModal(discord.ui.Modal, title="Calculate - Ratio & Capacity")
             marksman = float(str(self.marksman_pct.value).strip())
             capacity = parse_int(str(self.capacity.value), "Capacity")
         except ValueError:
-            await interaction.response.send_message(
-                "Percentages must be numbers.", ephemeral=True
-            )
+            await interaction.response.send_message("Percentages must be numbers.", ephemeral=True)
             return
 
         ratio = {
@@ -108,17 +156,15 @@ class RatioCapacityModal(discord.ui.Modal, title="Calculate - Ratio & Capacity")
                     formation_type=self.formation_type,
                     ratio=ratio,
                     capacity=capacity,
+                    captain_id=self.captain_id,
+                    captain_heroes=self.captain_heroes,
                     guild_id=guild_id,
                 )
-
-
             except (InvalidRatioError, InvalidCapacityError) as exc:
                 await interaction.response.send_message(str(exc), ephemeral=True)
                 return
             text = format_result(result)
 
-        # Discord messages cap at 2000 chars; wrap in a code block and
-        # split if needed rather than silently truncating the result.
         chunks = _chunk_for_discord(text)
         await interaction.response.send_message(chunks[0], ephemeral=True)
         for chunk in chunks[1:]:

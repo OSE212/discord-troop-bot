@@ -395,10 +395,10 @@ function switchTab(tabId) {
 // Mobile Hamburger Menu
 const hamburgerBtn = document.getElementById('hamburger-btn');
 const headerCenter = document.getElementById('header-center');
-const headerRight  = document.querySelector('.header-right');
+const headerRight = document.querySelector('.header-right');
 
 // Track original DOM position so we can restore on close
-let _hrOriginalParent   = headerRight ? headerRight.parentNode : null;
+let _hrOriginalParent = headerRight ? headerRight.parentNode : null;
 let _hrOriginalNextSibling = headerRight ? headerRight.nextSibling : null;
 
 function isMobile() {
@@ -541,10 +541,10 @@ async function loadPlayers() {
     ]);
     state.players = players;
     window.warRoomAttendance = new Set(attRes.checked_in_ids || []);
-    
+
     const countEl = document.getElementById('war-online-count');
     if (countEl) countEl.textContent = window.warRoomAttendance.size;
-    
+
     renderRoster();
   } catch (err) {
     elements.rosterTableBody.innerHTML = `<tr><td colspan="9" class="empty-cell text-danger">Failed to load players: ${err.message}</td></tr>`;
@@ -604,7 +604,7 @@ function renderRoster() {
       </tr>
     `;
   }).join('');
-  
+
   // Attach attendance listeners
   tbody.querySelectorAll('.roster-check').forEach(cb => {
     cb.addEventListener('change', async (e) => {
@@ -727,12 +727,12 @@ function renderHeroesGrid() {
   `).join('');
 }
 
-window.removeHero = function(index) {
+window.removeHero = function (index) {
   state.formHeroes.splice(index, 1);
   renderHeroesGrid();
 };
 
-window.updateHeroField = function(index, field, value) {
+window.updateHeroField = function (index, field, value) {
   const num = Math.max(1, Math.min(5, parseInt(value, 10) || 1));
   state.formHeroes[index][field] = num;
 };
@@ -847,15 +847,14 @@ async function runSimulation() {
 
   try {
     const payload = {
-      mode: 'defence', // garrison is always defence
-      formation_type: 'garrison',
+      mode: state.sim.mode,
+      formation_type: state.sim.formation_type,
       capacity: capacity,
       alliance_tag: elements.simAllianceSelect ? elements.simAllianceSelect.value : '',
-      ratio: {
-        infantry: state.sim.inf,
-        lancers: state.sim.lan,
-        marksman: state.sim.mrk,
-      },
+      ratio: { infantry: state.sim.inf, lancers: state.sim.lan, marksman: state.sim.mrk },
+      // Read these from your new HTML dropdowns
+      captain_id: parseInt(document.getElementById('sim-captain-select').value, 10) || null,
+      captain_heroes: getSelectedCaptainHeroes(),
       target_joiners: getSelectedHeroJoiners(),
     };
 
@@ -1170,10 +1169,10 @@ function populateHeroSlotDropdowns(maxGen) {
     : (isNaN(Number(maxGen)) ? 99 : Number(maxGen));
 
   const groups = {
-    attack:  { label: '⚔️ Attack Buffers',       items: [] },
-    defence: { label: '🛡️ Defense Buffers',      items: [] },
-    caller:  { label: '👑 Callers & Utilities',  items: [] },
-    custom:  { label: '⭐ Roster Heroes',         items: [] },
+    attack: { label: '⚔️ Attack Buffers', items: [] },
+    defence: { label: '🛡️ Defense Buffers', items: [] },
+    caller: { label: '👑 Callers & Utilities', items: [] },
+    custom: { label: '⭐ Roster Heroes', items: [] },
   };
 
   state.heroCatalog.forEach(h => {
@@ -1790,7 +1789,7 @@ function setupWarRoomListeners() {
   const btnSelectAll = document.getElementById('btn-war-select-all');
   const btnClear = document.getElementById('btn-war-clear');
   const btnCalc = document.getElementById('btn-war-calculate');
-  
+
   if (btnSelectAll) {
     btnSelectAll.addEventListener('click', async () => {
       const allIds = state.players.map(p => p.id);
@@ -1808,7 +1807,7 @@ function setupWarRoomListeners() {
       }
     });
   }
-  
+
   if (btnClear) {
     btnClear.addEventListener('click', async () => {
       try {
@@ -1822,18 +1821,18 @@ function setupWarRoomListeners() {
       }
     });
   }
-  
+
   if (btnCalc) {
     btnCalc.addEventListener('click', async () => {
       if (!window.warRoomAttendance || window.warRoomAttendance.size === 0) {
         showToast('Warning: No players checked in! Please check in players from the Roster tab first.', 'error');
         return;
       }
-      
+
       const rallyCount = parseInt(document.getElementById('war-rallies').value, 10);
       const generation = parseInt(document.getElementById('war-generation').value, 10);
       const scope = document.getElementById('war-scope').value;
-      
+
       const payload = {
         rally_count: rallyCount,
         generation: generation,
@@ -1841,7 +1840,7 @@ function setupWarRoomListeners() {
         online_only: true,
         post_to_discord: false
       };
-      
+
       btnCalc.textContent = 'Calculating...';
       btnCalc.disabled = true;
       try {
@@ -1870,12 +1869,12 @@ function setupWarRoomListeners() {
       btn.classList.add('active');
       btn.style.background = 'var(--bg-card)';
       btn.style.color = 'var(--text-primary)';
-      
+
       document.querySelectorAll('.sub-pane').forEach(p => p.style.display = 'none');
       const targetId = btn.getAttribute('data-sub');
       const target = document.getElementById(targetId);
       if (target) target.style.display = 'block';
-      
+
       if (targetId === 'sub-war-room') {
         loadWarRoom();
       }
@@ -1887,22 +1886,22 @@ function renderWarResults(rallies) {
   const container = document.getElementById('war-results-container');
   if (!container) return;
   container.innerHTML = '';
-  
+
   if (rallies.length === 0) {
     container.innerHTML = '<div class="glass-card"><p style="color:var(--text-muted);">No online players available to form rallies.</p></div>';
     return;
   }
-  
+
   rallies.forEach(rally => {
     const card = document.createElement('div');
     card.className = 'glass-card';
     card.style.borderTop = `3px solid ${rally.role === 'main_strike' ? 'var(--color-amber)' : rally.role === 'garrison_defense' ? 'var(--color-cyan)' : 'var(--color-rose)'}`;
-    
+
     // Create header with Hero Recommendations
     const p1 = rally.players[0];
     const recCaptain = p1?.recommended_captain || '-';
     const joiners = p1?.recommended_joiners?.join(', ') || '-';
-    
+
     card.innerHTML = `
       <h3 style="margin-bottom: 8px;">${rally.label}</h3>
       <div style="display:flex; gap:16px; margin-bottom: 16px; font-size:13px;">

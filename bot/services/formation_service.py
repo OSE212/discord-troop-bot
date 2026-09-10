@@ -5,6 +5,7 @@ Calculation never writes to player registration data (spec section
 9) -- this service only reads players and produces an in-memory
 FormationResult.
 """
+from bot.optimizer.optimizer import HERO_BUFF_DESCRIPTIONS
 from __future__ import annotations
 
 from bot.database.models.player import Player, TroopType
@@ -107,6 +108,17 @@ def format_result(result: FormationResult) -> str:
     lines.append("TARGET")
     for t in TroopType:
         lines.append(f"{t.value.capitalize()}: {result.target[t]:,}")
+    lines.append("")
+    # Insert this inside format_result(result) before "TARGET" or "SELECTED PLAYERS"
+    if getattr(req, 'captain_id', None):
+        lines.append("COMMAND TEAM (EXACT RATIO)")
+        cap_summary = next((s for s in result.selected_players if s.player_id == req.captain_id), None)
+        if cap_summary:
+            lines.append(f"Captain: {cap_summary.player_name}")
+        if getattr(req, 'captain_heroes', None):
+            # Import HERO_BUFF_DESCRIPTIONS from optimizer.py
+            heroes_str = "\n".join(f"  • {h}: {HERO_BUFF_DESCRIPTIONS.get(h.lower(), 'Expedition Skill')}" for h in req.captain_heroes)
+            lines.append(heroes_str)
     lines.append("")
     lines.append("SELECTED PLAYERS")
     for i, summary in enumerate(result.selected_players, start=1):

@@ -72,8 +72,6 @@ def optimize(
     request: FormationRequest,
     config: RankingConfig,
 ) -> FormationResult:
-    # In Garrison mode, apply a 1.67x buffer to target capacity to account for absent players
-    # / single-squad limits, so the slot fills reliably while solos arrive.
     if request.formation_type == FormationType.GARRISON:
         effective_target_capacity = int(round(request.capacity * 1.67))
     else:
@@ -83,18 +81,30 @@ def optimize(
     remaining_target = dict(targets)
     remaining_march = {p.player_id: p.march_limit for p in players}
     players_by_id = {p.player_id: p for p in players}
-
-    candidates = _build_candidates(players, request, config)
-
     summaries: dict[int, PlayerAllocationSummary] = {}
+
+    # --- 1. CAPTAIN PRE-ALLOCATION ---
+    if getattr(request, 'captain_id', None) and request.captain_id in players_by_id:
+        cap_id = request.captain_id
+        cap_limit = players_by_id[cap_id].march_limit
+        cap_targets = compute_targets(request.ratio, cap_limit) # Exact ratio applied
+        
+        cap_summary = summaries.setdefault(cap_id, PlayerAllocationSummary(player_id=cap_id, player_name=players_by_id[cap_id].name))
+        
+        for t_type, amt in cap_targets.items():
+            cap_summary.contributions[t_type] = amt
+            remaining_target[t_type] -= amt
+            
+        remaining_march[cap_id] -= sum(cap_targets.values())
+
+    # --- 2. GREEDY ALLOCATION FOR JOINERS ---
+    candidates = _build_candidates(players, request, config)
 
     for candidate in candidates:
         troop_type = candidate.troop_type
         player_id = candidate.player_id
 
-        if remaining_target[troop_type] <= 0:
-            continue
-        if remaining_march.get(player_id, 0) <= 0:
+        if remaining_target[troop_type] <= 0 or remaining_march.get(player_id, 0) <= 0:
             continue
 
         availability = players_by_id[player_id].troop_types[troop_type]
@@ -104,44 +114,30 @@ def optimize(
             else math.inf
         )
 
-        amount = min(
-            remaining_target[troop_type],
-            remaining_march[player_id],
-            quantity_cap,
-        )
+        amount = min(remaining_target[troop_type], remaining_march[player_id], quantity_cap)
         if amount <= 0:
             continue
+            
         amount = int(amount)
-
         remaining_target[troop_type] -= amount
         remaining_march[player_id] -= amount
 
         summary = summaries.setdefault(
             player_id,
-            PlayerAllocationSummary(
-                player_id=player_id, player_name=candidate.player_name
-            ),
+            PlayerAllocationSummary(player_id=player_id, player_name=candidate.player_name),
         )
-        summary.contributions[troop_type] = (
-            summary.contributions.get(troop_type, 0) + amount
-        )
+        summary.contributions[troop_type] = summary.contributions.get(troop_type, 0) + amount
 
     final = {t: targets[t] - remaining_target[t] for t in TroopType}
     actual_ratio = compute_actual_ratio(final)
     deviation = compute_deviation(request.ratio, actual_ratio)
-    status = (
-        Status.EXACT
-        if all(remaining_target[t] == 0 for t in TroopType)
-        else Status.BEST_EFFORT
-    )
+    status = Status.EXACT if all(remaining_target[t] <= 0 for t in TroopType) else Status.BEST_EFFORT
 
-    # Sort selected players by total contribution, descending, for a
-    # readable result (highest contributors first).
-    selected_players = sorted(
-        summaries.values(), key=lambda s: s.total, reverse=True
-    )
-
-    joiners = _select_top_joiners(selected_players, players_by_id, request)
+    selected_players = sorted(summaries.values(), key=lambda s: s.total, reverse=True)
+    
+    # Exclude the captain from being recommended as a joiner
+    joiner_pool = [s for s in selected_players if s.player_id != getattr(request, 'captain_id', None)]
+    joiners = _select_top_joiners(joiner_pool, players_by_id, request)
 
     return FormationResult(
         request=request,
