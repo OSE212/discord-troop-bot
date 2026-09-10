@@ -623,17 +623,23 @@ function renderCaptainSelectionBlocks() {
     }
   });
 
+  // Collect current selections before re-rendering HTML
+  const prevSelections = [];
+  for (let i = 1; i <= count; i++) {
+    prevSelections.push({
+      cap: document.getElementById(`sim-captain-select-${i}`)?.value || '',
+      inf: document.getElementById(`sim-captain-hero-inf-${i}`)?.value || '',
+      lan: document.getElementById(`sim-captain-hero-lan-${i}`)?.value || '',
+      mrk: document.getElementById(`sim-captain-hero-mrk-${i}`)?.value || '',
+    });
+  }
+
   let blocksHtml = '';
 
   for (let i = 1; i <= count; i++) {
     const blockTitle = formationType === 'garrison'
       ? 'Garrison Captain & 3 Heroes'
       : (count > 1 ? `Rally ${i} Captain & 3 Heroes` : 'Rally Captain & 3 Heroes');
-
-    const prevCap = document.getElementById(`sim-captain-select-${i}`)?.value || '';
-    const prevInf = document.getElementById(`sim-captain-hero-inf-${i}`)?.value || '';
-    const prevLan = document.getElementById(`sim-captain-hero-lan-${i}`)?.value || '';
-    const prevMrk = document.getElementById(`sim-captain-hero-mrk-${i}`)?.value || '';
 
     blocksHtml += `
       <div class="form-group captain-selection-block" style="background:rgba(255,255,255,0.02); padding:14px; border-radius:8px; border:1px solid var(--border-color); margin-bottom:16px;">
@@ -675,15 +681,18 @@ function renderCaptainSelectionBlocks() {
   container.innerHTML = blocksHtml;
 
   for (let i = 1; i <= count; i++) {
+    const prev = prevSelections[i - 1];
+    if (!prev) continue;
+
     const capEl = document.getElementById(`sim-captain-select-${i}`);
     const infEl = document.getElementById(`sim-captain-hero-inf-${i}`);
     const lanEl = document.getElementById(`sim-captain-hero-lan-${i}`);
     const mrkEl = document.getElementById(`sim-captain-hero-mrk-${i}`);
 
-    if (capEl && prevCap && capEl.querySelector(`option[value="${prevCap}"]`)) capEl.value = prevCap;
-    if (infEl && prevInf && infEl.querySelector(`option[value="${prevInf}"]`)) infEl.value = prevInf;
-    if (lanEl && prevLan && lanEl.querySelector(`option[value="${prevLan}"]`)) lanEl.value = prevLan;
-    if (mrkEl && prevMrk && mrkEl.querySelector(`option[value="${prevMrk}"]`)) mrkEl.value = prevMrk;
+    if (capEl && prev.cap && capEl.querySelector(`option[value="${prev.cap}"]`)) capEl.value = prev.cap;
+    if (infEl && prev.inf && infEl.querySelector(`option[value="${prev.inf}"]`)) infEl.value = prev.inf;
+    if (lanEl && prev.lan && lanEl.querySelector(`option[value="${prev.lan}"]`)) lanEl.value = prev.lan;
+    if (mrkEl && prev.mrk && mrkEl.querySelector(`option[value="${prev.mrk}"]`)) mrkEl.value = prev.mrk;
   }
 }
 
