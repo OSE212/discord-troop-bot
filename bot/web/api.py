@@ -960,14 +960,24 @@ async def handle_calculate(request: web.Request) -> web.Response:
         fill_pct = round((total_assigned / base_cap * 100), 2) if base_cap > 0 else 0
         garrison_gap = max(0, target_cap - total_assigned) if formation_type == FormationType.GARRISON else 0
 
+        # Collect FC levels and helios for selected players
+        player_db_map = {p.id: p for p in repo.list_all()}
+
         allocations = []
         for player_summary in result.selected_players:
+            p_obj = player_db_map.get(player_summary.player_id)
+            p_levels = [t.level for t in p_obj.troop_profiles if t.level is not None] if p_obj else []
+            p_avg_fc = round(sum(p_levels) / len(p_levels)) if p_levels else None
+            p_helios = any(t.helios for t in p_obj.troop_profiles) if p_obj else False
+
             for troop_type, amount in player_summary.contributions.items():
                 allocations.append({
                     "player_id": player_summary.player_id,
                     "player_name": player_summary.player_name,
                     "troop_type": troop_type.value,
                     "amount": amount,
+                    "fc_level": p_avg_fc,
+                    "helios": p_helios,
                 })
 
         joiner_recs = [
@@ -1006,6 +1016,9 @@ async def handle_calculate(request: web.Request) -> web.Response:
             "total_assigned": total_assigned,
             "fill_percentage": fill_pct,
             "status": result.status.value,
+            "deviation": {t.value: round(v, 2) for t, v in result.deviation.items()},
+            "deviation_sum": round(sum(abs(v) for v in result.deviation.values()), 2),
+            "target_ratios": {t.value: round(ratio[t], 2) for t in TroopType},
             "targets": {t.value: result.target[t] for t in TroopType},
             "actuals": {t.value: result.final[t] for t in TroopType},
             "actual_ratios": {t.value: round(result.actual_ratio[t], 2) for t in TroopType},
@@ -1016,6 +1029,8 @@ async def handle_calculate(request: web.Request) -> web.Response:
                     "player_name": p.player_name,
                     "total": p.total,
                     "contributions": {t.value: amt for t, amt in p.contributions.items()},
+                    "fc_level": (round(sum([t.level for t in player_db_map[p.player_id].troop_profiles if t.level is not None]) / len([t.level for t in player_db_map[p.player_id].troop_profiles if t.level is not None])) if (p.player_id in player_db_map and [t.level for t in player_db_map[p.player_id].troop_profiles if t.level is not None]) else None),
+                    "helios": (any(t.helios for t in player_db_map[p.player_id].troop_profiles) if p.player_id in player_db_map else False),
                 }
                 for p in result.selected_players
             ],

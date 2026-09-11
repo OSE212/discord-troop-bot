@@ -32,18 +32,22 @@ def _ratio_to_troop_type(ratio_pct: dict) -> dict:
 
 
 def _power_score(player: Dict[str, Any]) -> float:
-    """Compute strength score for sorting: FC level × 10 + 50 per Helios type."""
-    score = 0.0
+    """Compute strength score prioritizing the highest troops (highest FC level & Helios).
+
+    Weights:
+      - Max FC Level * 1000 (FC8 > FC7 > FC6 > ...)
+      - Helios: +500 per Helios troop type (fire tier priority)
+      - Avg FC Level * 50
+      - March limit / 10000
+    """
     troops = player.get("troops", {})
-    for t_data in troops.values():
-        level = t_data.get("level") or 0
-        helios = t_data.get("helios", False)
-        score += level * 10
-        if helios:
-            score += 50
-    # Also factor in march limit (bigger = better) at a small weight
-    score += (player.get("march_limit", 0) / 10000)
-    return score
+    levels = [t_data.get("level") for t_data in troops.values() if t_data.get("level") is not None]
+    max_level = max(levels) if levels else 0
+    avg_level = (sum(levels) / len(levels)) if levels else 0
+    helios_count = sum(1 for t_data in troops.values() if t_data.get("helios", False))
+    march = player.get("march_limit", 0) or 0
+
+    return (max_level * 1000.0) + (helios_count * 500.0) + (avg_level * 50.0) + (march / 10000.0)
 
 
 def _assign_role_sequence(rally_count: int) -> List[RallyRole]:
@@ -145,10 +149,17 @@ class MultiRallyAssignmentEngine:
             custom_ratio = cap_info.get("ratio")
             if custom_ratio and isinstance(custom_ratio, dict):
                 inf = float(custom_ratio.get("infantry", 0))
-                lan = float(custom_ratio.get("lancer", custom_ratio.get("lancers", 0)))
+                lan = float(custom_ratio.get("lancers", custom_ratio.get("lancer", 0)))
                 mrk = float(custom_ratio.get("marksman", 0))
                 if (inf + lan + mrk) > 0:
                     ratio = {"infantry": inf, "lancers": lan, "marksman": mrk}
+            else:
+                lan_val = float(ratio.get("lancers", ratio.get("lancer", 20)))
+                ratio = {
+                    "infantry": float(ratio.get("infantry", 50)),
+                    "lancers": lan_val,
+                    "marksman": float(ratio.get("marksman", 30)),
+                }
 
             # Support custom joiners override per rally if specified in rally_captains
             custom_joiners = [j for j in cap_info.get("target_joiners", []) if j] if cap_info else []

@@ -8,7 +8,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Outfit:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="/static/css/style.css?v=3.5">
+  <link rel="stylesheet" href="/static/css/style.css?v=3.6">
 </head>
 <body>
   <div class="app-container">
@@ -681,6 +681,9 @@
                 </div>
               </div>
 
+              <!-- Dynamic Result Ratio Visual Card -->
+              <div id="sim-result-ratio-container" class="mt-24"></div>
+
               <div class="mt-24">
                 <h4 class="subheading">Target vs Actual Breakdown</h4>
                 <div class="comparison-bars" id="sim-comparison-bars">
@@ -695,6 +698,7 @@
                     <thead>
                       <tr>
                         <th>Player</th>
+                        <th>Troop Tier &amp; Priority</th>
                         <th style="color:var(--troop-inf)">Infantry</th>
                         <th style="color:var(--troop-lan)">Lancers</th>
                         <th style="color:var(--troop-mrk)">Marksman</th>
@@ -1218,6 +1222,6 @@
   <!-- TOAST CONTAINER -->
   <div class="toast-container" id="toast-container"></div>
 
-  <script src="/static/js/app.js?v=3.5"></script>
+  <script src="/static/js/app.js?v=3.6"></script>
 </body>
 </html>

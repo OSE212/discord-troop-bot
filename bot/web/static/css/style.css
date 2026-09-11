@@ -3280,3 +3280,158 @@ body {
 
 /* Context-hiding utility */
 .hidden-context { display: none !important; }
+
+/* ============================================================
+   RESULT TROOP RATIO CARD & PRIORITY INDICATORS
+   ============================================================ */
+.result-ratio-card {
+  background: rgba(0, 0, 0, 0.28) !important;
+  border: 1px solid rgba(0, 242, 254, 0.25) !important;
+  border-radius: 10px !important;
+  padding: 14px 16px !important;
+  margin-bottom: 16px !important;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.25);
+}
+
+.result-ratio-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 10px;
+  flex-wrap: wrap;
+}
+
+.result-ratio-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-family: 'Outfit', sans-serif;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text-primary);
+  letter-spacing: 0.02em;
+}
+
+.result-ratio-stats {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+.result-ratio-stats strong {
+  color: var(--color-cyan);
+  font-weight: 700;
+}
+
+.ratio-deviation-badge {
+  font-size: 10px;
+  font-weight: 800;
+  padding: 2px 8px;
+  border-radius: 4px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+.ratio-deviation-badge.exact {
+  background: rgba(16, 185, 129, 0.18);
+  border: 1px solid var(--color-emerald);
+  color: var(--color-emerald);
+}
+.ratio-deviation-badge.best-effort {
+  background: rgba(245, 158, 11, 0.18);
+  border: 1px solid var(--color-amber);
+  color: var(--color-amber);
+}
+
+.result-ratio-strip {
+  height: 10px !important;
+  border-radius: 6px !important;
+  margin-bottom: 12px !important;
+  box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.4);
+}
+
+.ratio-breakdown-pills {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+}
+@media (max-width: 600px) {
+  .ratio-breakdown-pills {
+    grid-template-columns: 1fr;
+  }
+}
+
+.rb-pill {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 6px;
+  padding: 6px 10px;
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+.rb-pill strong { color: var(--text-primary); font-weight: 700; }
+.rb-pill.inf { border-color: rgba(59, 130, 246, 0.35); }
+.rb-pill.lan { border-color: rgba(245, 158, 11, 0.35); }
+.rb-pill.mrk { border-color: rgba(16, 185, 129, 0.35); }
+
+.rally-result-ratio-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: rgba(0, 242, 254, 0.08);
+  border: 1px solid rgba(0, 242, 254, 0.3);
+  border-radius: 6px;
+  padding: 3px 10px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+.rally-result-ratio-pill strong.inf { color: var(--troop-inf); }
+.rally-result-ratio-pill strong.lan { color: var(--troop-lan); }
+.rally-result-ratio-pill strong.mrk { color: var(--troop-mrk); }
+
+.priority-confirmed-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  background: rgba(16, 185, 129, 0.12);
+  border: 1px solid rgba(16, 185, 129, 0.4);
+  border-radius: 6px;
+  padding: 3px 10px;
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--color-emerald);
+  letter-spacing: 0.03em;
+}
+
+.priority-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 7px;
+  border-radius: 4px;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+}
+.priority-tag.whale {
+  background: rgba(245, 158, 11, 0.2);
+  border: 1px solid var(--color-amber);
+  color: var(--color-amber);
+}
+.priority-tag.high {
+  background: rgba(0, 242, 254, 0.15);
+  border: 1px solid var(--color-cyan);
+  color: var(--color-cyan);
+}
+.priority-tag.normal {
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  color: var(--text-muted);
+}
+

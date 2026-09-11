@@ -196,7 +196,11 @@ function formatFcLevel(lvl, decimals) {
   if (lvl === null || lvl === undefined) return '';
   const num = Number(lvl);
   if (isNaN(num)) return '';
-  if (num >= 31) {
+  if (num >= 1 && num <= 8) {
+    if (decimals !== undefined && !Number.isInteger(num)) return `FC${num.toFixed(decimals)}`;
+    return `FC${num}`;
+  }
+  if (num >= 31 && num <= 38) {
     const fc = num - 30;
     if (decimals !== undefined && !Number.isInteger(fc)) return `FC${fc.toFixed(decimals)}`;
     return `FC${fc}`;
@@ -1417,13 +1421,13 @@ function renderMultiRallyInSim(rallies) {
     const fillPct = maxCapacity > 0 ? Math.min(100, Math.round((totalAssigned / maxCapacity) * 100)) : 100;
     const fillClass = fillPct >= 100 ? 'fill-100' : fillPct >= 80 ? 'fill-mid' : 'fill-low';
 
+    const targetInfPct = Number(rally.ratio?.infantry) || 50;
+    const targetLanPct = Number(rally.ratio?.lancers ?? rally.ratio?.lancer) || 20;
+    const targetMrkPct = Number(rally.ratio?.marksman) || 30;
+
     const actualInfPct = totalAssigned > 0 ? Math.round((totalInf / totalAssigned) * 100) : 0;
     const actualLanPct = totalAssigned > 0 ? Math.round((totalLan / totalAssigned) * 100) : 0;
     const actualMrkPct = totalAssigned > 0 ? Math.round((totalMrk / totalAssigned) * 100) : 0;
-
-    const targetInfPct = rally.ratio?.infantry || 0;
-    const targetLanPct = rally.ratio?.lancer || 0;
-    const targetMrkPct = rally.ratio?.marksman || 0;
 
     const joinersHtml = joiners.length > 0 ? `
       <div class="rally-breakdown-section" style="margin-bottom:16px;">
@@ -1445,18 +1449,27 @@ function renderMultiRallyInSim(rallies) {
     const tableRows = (rally.players || []).map((p, idx) => {
       let roleBadge = '';
       let heroNote = '';
+      let priorityBadge = '';
+
       if (idx === 0) {
         roleBadge = `<span class="role-badge captain">Captain</span>`;
+        priorityBadge = `<span class="priority-tag whale">👑 #1 Top Whale</span>`;
       } else if (idx <= 4) {
         roleBadge = `<span class="role-badge joiner">Slot ${idx}</span>`;
+        priorityBadge = `<span class="priority-tag high">⭐ #${idx + 1} High Tier</span>`;
         const firstHero = p.recommended_joiners?.[0] || '';
         if (firstHero) heroNote = `<span style="font-size:11px;color:var(--color-cyan);font-weight:600;">[${escapeHtml(firstHero)}]</span> `;
       } else {
         roleBadge = `<span class="role-badge rest">Joiner</span>`;
+        priorityBadge = `<span class="priority-tag normal">#${idx + 1} Tier</span>`;
       }
+
+      const fcPill = p.fc_level ? `<span class="pill-level ${p.helios ? 'helios' : ''}">${p.helios ? '🔥 ' : ''}${formatFcLevel(p.fc_level)}</span>` : '<span class="text-muted">-</span>';
+
       return `
         <tr>
           <td>${roleBadge}<strong>${escapeHtml(p.player_name)}</strong> ${heroNote}</td>
+          <td><div style="display:flex;align-items:center;gap:6px;">${priorityBadge} ${fcPill}</div></td>
           <td style="color:var(--troop-inf);font-weight:600;">${p.infantry_count.toLocaleString()}</td>
           <td style="color:var(--troop-lan);font-weight:600;">${p.lancer_count.toLocaleString()}</td>
           <td style="color:var(--troop-mrk);font-weight:600;">${p.marksman_count.toLocaleString()}</td>
@@ -1469,9 +1482,15 @@ function renderMultiRallyInSim(rallies) {
     card.className = `rally-result-card ${roleClass}`;
     card.innerHTML = `
       <div class="rally-result-header">
-        <div style="display:flex;align-items:center;gap:10px;">
+        <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
           <h3>${rally.label}</h3>
           ${avgFcLabel}
+          <span class="rally-result-ratio-pill">
+            <span class="troop-dot inf"></span><strong class="inf">${actualInfPct}%</strong> Inf ·
+            <span class="troop-dot lan"></span><strong class="lan">${actualLanPct}%</strong> Lan ·
+            <span class="troop-dot mrk"></span><strong class="mrk">${actualMrkPct}%</strong> Mrk
+          </span>
+          <span class="priority-confirmed-badge">⚡ Highest Troops Prioritized</span>
         </div>
         <span class="rally-status-badge">Status: EXACT | Players: ${rally.players.length}</span>
       </div>
@@ -1488,6 +1507,34 @@ function renderMultiRallyInSim(rallies) {
         <div class="rally-metric-card">
           <div class="rally-metric-val">${rally.players.length}</div>
           <div class="rally-metric-lbl">Players Deployed</div>
+        </div>
+      </div>
+
+      <!-- Result Troop Ratio Card -->
+      <div class="result-ratio-card">
+        <div class="result-ratio-header">
+          <div class="result-ratio-title">
+            <span>📊 Result Troop Ratio</span>
+            <span class="ratio-deviation-badge ${actualInfPct === targetInfPct && actualLanPct === targetLanPct && actualMrkPct === targetMrkPct ? 'exact' : 'best-effort'}">
+              ${actualInfPct === targetInfPct && actualLanPct === targetLanPct && actualMrkPct === targetMrkPct ? '✓ Exact Ratio Match' : 'Best Effort Ratio'}
+            </span>
+          </div>
+          <div class="result-ratio-stats">
+            <span>Target: <strong>${targetInfPct} / ${targetLanPct} / ${targetMrkPct}%</strong></span>
+            <span>Achieved: <strong>${actualInfPct}% / ${actualLanPct}% / ${actualMrkPct}%</strong></span>
+          </div>
+        </div>
+
+        <div class="ratio-preview-bar result-ratio-strip">
+          <div class="rpb-inf" style="flex:${actualInfPct}" title="Infantry: ${formatNumber(totalInf)} (${actualInfPct}%)"></div>
+          <div class="rpb-lan" style="flex:${actualLanPct}" title="Lancers: ${formatNumber(totalLan)} (${actualLanPct}%)"></div>
+          <div class="rpb-mrk" style="flex:${actualMrkPct}" title="Marksman: ${formatNumber(totalMrk)} (${actualMrkPct}%)"></div>
+        </div>
+
+        <div class="ratio-breakdown-pills">
+          <div class="rb-pill inf"><span class="troop-dot inf"></span> Infantry: <strong>${formatNumber(totalInf)}</strong> (${actualInfPct}%)</div>
+          <div class="rb-pill lan"><span class="troop-dot lan"></span> Lancers: <strong>${formatNumber(totalLan)}</strong> (${actualLanPct}%)</div>
+          <div class="rb-pill mrk"><span class="troop-dot mrk"></span> Marksman: <strong>${formatNumber(totalMrk)}</strong> (${actualMrkPct}%)</div>
         </div>
       </div>
 
@@ -1520,7 +1567,7 @@ function renderMultiRallyInSim(rallies) {
 
       <div class="table-responsive">
         <table class="data-table">
-          <thead><tr><th>Player</th><th>Infantry</th><th>Lancers</th><th>Marksman</th><th>Total March</th><th>Notes</th></tr></thead>
+          <thead><tr><th>Player</th><th>Troop Tier &amp; Priority</th><th>Infantry</th><th>Lancers</th><th>Marksman</th><th>Total March</th><th>Notes</th></tr></thead>
           <tbody>${tableRows}</tbody>
         </table>
       </div>`;
@@ -1675,6 +1722,48 @@ function renderSimResult() {
     }
   }
 
+  // Dynamic Result Troop Ratio Card
+  const ratioContainer = document.getElementById('sim-result-ratio-container');
+  if (ratioContainer) {
+    const targetInf = res.target_ratios ? res.target_ratios.infantry : Math.round(((res.targets?.infantry || 0) / (res.target_capacity || 1)) * 100);
+    const targetLan = res.target_ratios ? res.target_ratios.lancers : Math.round(((res.targets?.lancers || 0) / (res.target_capacity || 1)) * 100);
+    const targetMrk = res.target_ratios ? res.target_ratios.marksman : Math.round(((res.targets?.marksman || 0) / (res.target_capacity || 1)) * 100);
+
+    const actualInf = res.actual_ratios?.infantry || 0;
+    const actualLan = res.actual_ratios?.lancers || 0;
+    const actualMrk = res.actual_ratios?.marksman || 0;
+
+    ratioContainer.innerHTML = `
+      <div class="result-ratio-card">
+        <div class="result-ratio-header">
+          <div class="result-ratio-title">
+            <span>📊 Result Troop Ratio</span>
+            <span class="ratio-deviation-badge ${res.deviation === 0 ? 'exact' : 'best-effort'}">
+              ${res.deviation === 0 ? '✓ Exact Ratio Match' : `Deviation: ${res.deviation}%`}
+            </span>
+            <span class="priority-confirmed-badge">⚡ Highest Troops Prioritized</span>
+          </div>
+          <div class="result-ratio-stats">
+            <span>Target: <strong>${targetInf} / ${targetLan} / ${targetMrk}%</strong></span>
+            <span>Achieved: <strong>${actualInf}% / ${actualLan}% / ${actualMrk}%</strong></span>
+          </div>
+        </div>
+
+        <div class="ratio-preview-bar result-ratio-strip">
+          <div class="rpb-inf" style="flex:${actualInf}" title="Infantry: ${formatNumber(res.actuals?.infantry)} (${actualInf}%)"></div>
+          <div class="rpb-lan" style="flex:${actualLan}" title="Lancers: ${formatNumber(res.actuals?.lancers)} (${actualLan}%)"></div>
+          <div class="rpb-mrk" style="flex:${actualMrk}" title="Marksman: ${formatNumber(res.actuals?.marksman)} (${actualMrk}%)"></div>
+        </div>
+
+        <div class="ratio-breakdown-pills">
+          <div class="rb-pill inf"><span class="troop-dot inf"></span> Infantry: <strong>${formatNumber(res.actuals?.infantry)}</strong> (${actualInf}%)</div>
+          <div class="rb-pill lan"><span class="troop-dot lan"></span> Lancers: <strong>${formatNumber(res.actuals?.lancers)}</strong> (${actualLan}%)</div>
+          <div class="rb-pill mrk"><span class="troop-dot mrk"></span> Marksman: <strong>${formatNumber(res.actuals?.marksman)}</strong> (${actualMrk}%)</div>
+        </div>
+      </div>
+    `;
+  }
+
   // Comparison Bars
   const troopMeta = [
     { key: 'infantry', name: 'Infantry', class: 'inf' },
@@ -1701,12 +1790,22 @@ function renderSimResult() {
 
   // Assignments — group allocations by player, one row per player
   if (!res.allocations || res.allocations.length === 0) {
-    elements.simAssignmentsTbody.innerHTML = '<tr><td colspan="5" class="empty-cell">No players allocated (ensure players have complete registrations).</td></tr>';
+    elements.simAssignmentsTbody.innerHTML = '<tr><td colspan="6" class="empty-cell">No players allocated (ensure players have complete registrations).</td></tr>';
   } else {
     // Group by player_name
     const byPlayer = {};
     res.allocations.forEach(a => {
-      if (!byPlayer[a.player_name]) byPlayer[a.player_name] = { infantry: 0, lancers: 0, marksman: 0, total: 0, player_id: a.player_id };
+      if (!byPlayer[a.player_name]) {
+        byPlayer[a.player_name] = {
+          infantry: 0,
+          lancers: 0,
+          marksman: 0,
+          total: 0,
+          player_id: a.player_id,
+          fc_level: a.fc_level,
+          helios: a.helios,
+        };
+      }
       const key = a.troop_type.toLowerCase();
       byPlayer[a.player_name][key] = (byPlayer[a.player_name][key] || 0) + a.amount;
       byPlayer[a.player_name].total += a.amount;
@@ -1726,11 +1825,13 @@ function renderSimResult() {
     const rows = playerEntries.map(([name, t], idx) => {
       let roleBadge = '';
       let heroInfo = '';
+      let priorityBadge = '';
 
       const isCaptain = res.captain_id ? (t.player_id === res.captain_id) : (idx === 0);
 
       if (isCaptain) {
         roleBadge = `<span style="background:rgba(255,180,0,0.18); border:1px solid var(--color-amber); color:var(--color-amber); border-radius:4px; padding:2px 6px; font-size:11px; font-weight:700; margin-right:6px;">👑 Captain</span>`;
+        priorityBadge = `<span class="priority-tag whale">👑 #1 Priority</span>`;
         if (res.captain_hero_buffs && res.captain_hero_buffs.length > 0) {
           const capBuffs = res.captain_hero_buffs.map(b => `<strong>${escapeHtml(b.hero)}</strong> (${escapeHtml(b.buff)})`).join(' • ');
           heroInfo = `<div style="font-size:11px; color:var(--text-secondary); margin-top:3px;">Heroes: ${capBuffs}</div>`;
@@ -1743,13 +1844,17 @@ function renderSimResult() {
           const buffDesc = joinerRec ? joinerRec.buff_description : '';
 
           roleBadge = `<span style="background:rgba(0,242,254,0.12); border:1px solid var(--color-cyan); color:var(--color-cyan); border-radius:4px; padding:2px 6px; font-size:11px; font-weight:600; margin-right:6px;">Slot ${joinerIndex + 1} Joiner</span>`;
+          priorityBadge = `<span class="priority-tag high">⭐ #${joinerIndex + 2} High Tier</span>`;
           if (heroName) {
             heroInfo = `<div style="font-size:11px; color:var(--text-secondary); margin-top:3px;">1st Hero: <strong>${escapeHtml(heroName)}</strong> ${buffDesc ? `<span style="color:var(--color-cyan);">(${escapeHtml(buffDesc)})</span>` : ''}</div>`;
           }
         } else {
           roleBadge = `<span style="background:rgba(255,255,255,0.05); color:var(--text-muted); border-radius:4px; padding:2px 6px; font-size:11px; margin-right:6px;">Joiner</span>`;
+          priorityBadge = `<span class="priority-tag normal">#${idx + 1} Tier</span>`;
         }
       }
+
+      const fcPill = t.fc_level ? `<span class="pill-level ${t.helios ? 'helios' : ''}">${t.helios ? '🔥 ' : ''}${formatFcLevel(t.fc_level)}</span>` : '<span class="text-muted">-</span>';
 
       return `
         <tr>
@@ -1759,6 +1864,7 @@ function renderSimResult() {
             </div>
             ${heroInfo}
           </td>
+          <td><div style="display:flex;align-items:center;gap:6px;">${priorityBadge} ${fcPill}</div></td>
           <td style="color:var(--troop-inf); font-weight:600;">${formatNumber(t.infantry)}</td>
           <td style="color:var(--troop-lan); font-weight:600;">${formatNumber(t.lancers)}</td>
           <td style="color:var(--troop-mrk); font-weight:600;">${formatNumber(t.marksman)}</td>
