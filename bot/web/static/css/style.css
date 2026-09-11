@@ -985,7 +985,8 @@ body {
   margin-bottom: 12px;
 }
 
-.slider-label {
+.slider-label,
+.slider-type-badge {
   display: flex;
   align-items: center;
   gap: 7px;
@@ -2797,19 +2798,41 @@ body {
    ============================================================ */
 
 /* Section divider between Formation Setup / Ratio / Leadership */
-.sim-section-divider {
-  border: none;
-  border-top: 1px solid rgba(255, 255, 255, 0.07);
-  margin: 20px 0 20px;
+/* ============================================================
+   PANEL SECTION HEADERS & SIMULATOR CARDS
+   ============================================================ */
+.panel-section-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 16px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
 }
 
-.sim-section-heading {
-  font-size: 10px;
+.panel-section-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: rgba(0, 242, 254, 0.12);
+  border: 1px solid var(--color-cyan);
+  color: var(--color-cyan);
+  font-size: 11px;
+  font-weight: 800;
+  font-family: 'Outfit', sans-serif;
+  flex-shrink: 0;
+}
+
+.panel-section-title {
+  font-family: 'Outfit', sans-serif;
+  font-size: 15px;
   font-weight: 700;
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
-  color: var(--text-muted);
-  margin-bottom: 14px;
+  color: var(--text-primary);
+  letter-spacing: 0.02em;
+  margin: 0;
 }
 
 /* Online-player callout banner inside Simulator tab */
@@ -2819,178 +2842,344 @@ body {
   justify-content: space-between;
   gap: 12px;
   background: rgba(0, 242, 254, 0.06);
-  border: 1px solid rgba(0, 242, 254, 0.2);
+  border: 1px solid rgba(0, 242, 254, 0.25);
   border-radius: var(--radius-sm);
-  padding: 10px 14px;
-  margin-bottom: 20px;
+  padding: 10px 16px;
+  margin-bottom: 22px;
   font-size: 13px;
   color: var(--text-secondary);
 }
-.sim-online-banner strong { color: var(--color-cyan); }
+.sim-online-banner strong { color: var(--color-cyan); font-weight: 700; }
 .sim-online-banner .sim-banner-link {
   font-size: 12px;
   color: var(--color-cyan);
-  background: none;
-  border: 1px solid rgba(0, 242, 254, 0.35);
+  background: rgba(0, 242, 254, 0.08);
+  border: 1px solid rgba(0, 242, 254, 0.4);
   border-radius: 6px;
-  padding: 3px 10px;
+  padding: 4px 12px;
   cursor: pointer;
   transition: var(--transition);
   white-space: nowrap;
+  font-weight: 600;
 }
-.sim-online-banner .sim-banner-link:hover { background: rgba(0, 242, 254, 0.12); }
+.sim-online-banner .sim-banner-link:hover {
+  background: rgba(0, 242, 254, 0.18);
+  border-color: var(--color-cyan);
+}
 
-/* Captain / Rally block */
-.rally-block {
-  background: rgba(255, 255, 255, 0.02);
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  border-radius: var(--radius-sm);
-  padding: 14px;
-  margin-bottom: 16px;
+/* Range Slider Colored Thumbs ("scroll the point") */
+.range-slider {
+  flex: 1;
+  -webkit-appearance: none;
+  appearance: none;
+  height: 7px;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 4px;
+  outline: none;
+  cursor: pointer;
+  transition: background 0.15s ease;
 }
-.rally-block-title {
-  font-size: 13px;
-  font-weight: 700;
+
+.range-slider:hover {
+  background: rgba(255, 255, 255, 0.16);
+}
+
+.range-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: var(--color-cyan);
+  cursor: pointer;
+  box-shadow: 0 0 10px rgba(0, 242, 254, 0.7);
+  border: 2px solid #ffffff;
+  transition: transform 0.12s ease, box-shadow 0.12s ease;
+}
+
+.range-slider::-webkit-slider-thumb:hover {
+  transform: scale(1.22);
+  box-shadow: 0 0 16px rgba(0, 242, 254, 1);
+}
+
+.range-slider::-moz-range-thumb {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: var(--color-cyan);
+  cursor: pointer;
+  box-shadow: 0 0 10px rgba(0, 242, 254, 0.7);
+  border: 2px solid #ffffff;
+}
+
+.range-slider.slider-inf-thumb::-webkit-slider-thumb {
+  background: var(--troop-inf) !important;
+  box-shadow: 0 0 12px var(--troop-inf) !important;
+}
+.range-slider.slider-lan-thumb::-webkit-slider-thumb {
+  background: var(--troop-lan) !important;
+  box-shadow: 0 0 12px var(--troop-lan) !important;
+}
+.range-slider.slider-mrk-thumb::-webkit-slider-thumb {
+  background: var(--troop-mrk) !important;
+  box-shadow: 0 0 12px var(--troop-mrk) !important;
+}
+
+/* ============================================================
+   RALLY / GARRISON CAPTAIN CARD
+   ============================================================ */
+.rally-card {
+  background: rgba(12, 19, 36, 0.85) !important;
+  border: 1px solid rgba(0, 242, 254, 0.18) !important;
+  border-radius: 12px !important;
+  padding: 18px 20px !important;
+  margin-bottom: 20px !important;
+  box-shadow: 0 6px 24px rgba(0, 0, 0, 0.35) !important;
+  position: relative;
+  overflow: hidden;
+}
+
+.rally-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 3px;
+  background: linear-gradient(90deg, var(--color-cyan), var(--color-amber));
+}
+
+.rally-card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 14px;
+  flex-wrap: wrap;
+}
+
+.rally-card-identity {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.rally-badge {
+  font-family: 'Outfit', sans-serif;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  padding: 3px 10px;
+  border-radius: 6px;
+  text-transform: uppercase;
+}
+
+.rally-badge.rally {
+  background: rgba(245, 158, 11, 0.15);
   color: var(--color-amber);
-  margin-bottom: 3px;
+  border: 1px solid rgba(245, 158, 11, 0.4);
 }
-.rally-block-hint {
+
+.rally-badge.garrison {
+  background: rgba(0, 242, 254, 0.15);
+  color: var(--color-cyan);
+  border: 1px solid rgba(0, 242, 254, 0.4);
+}
+
+.rally-subtitle {
+  font-size: 12px;
+  color: var(--text-secondary);
+  font-weight: 600;
+}
+
+.rally-gen-tag {
   font-size: 11px;
   color: var(--text-muted);
-  margin-bottom: 10px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  padding: 2px 8px;
+  border-radius: 4px;
 }
 
-/* Captain search + dropdown stacked */
-.captain-search-wrap { margin-bottom: 0; }
-.captain-search-wrap input {
-  font-size: 12px;
-  height: 34px;
-  background: rgba(0, 0, 0, 0.25);
-  border-bottom-left-radius: 0;
-  border-bottom-right-radius: 0;
-}
-.captain-select-wrap { margin-bottom: 12px; }
-.captain-select-wrap select {
-  border-top-left-radius: 0;
-  border-top-right-radius: 0;
-  border-top: none !important;
+/* Captain Selector with Search */
+.captain-picker-box {
+  margin-bottom: 14px;
 }
 
-/* 3-column hero grid */
-.hero-trio-grid {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 8px;
-  margin-bottom: 12px;
-}
-.hero-trio-label {
-  font-size: 11px;
-  font-weight: 600;
+.picker-label {
   display: block;
-  margin-bottom: 4px;
-}
-.hero-trio-label.inf { color: var(--troop-inf); }
-.hero-trio-label.lan { color: var(--troop-lan); }
-.hero-trio-label.mrk { color: var(--troop-mrk); }
-
-/* Per-rally/garrison ratio section */
-.rally-ratio-section {
-  padding-top: 10px;
-  border-top: 1px solid rgba(255, 255, 255, 0.06);
-  margin-top: 4px;
-}
-.rally-ratio-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 8px;
-  flex-wrap: wrap;
-  gap: 6px;
-}
-.rally-ratio-label {
   font-size: 11px;
   font-weight: 700;
   color: var(--text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-bottom: 6px;
 }
-.rally-ratio-sum {
-  font-size: 10px;
-  font-weight: 700;
-  padding: 1px 7px;
-  border-radius: 20px;
-  border: 1px solid;
+
+.search-input-wrap {
+  position: relative;
+  margin-bottom: 6px;
 }
-.rally-ratio-sum.valid {
-  color: var(--color-emerald);
-  border-color: rgba(16, 185, 129, 0.4);
-  background: rgba(16, 185, 129, 0.08);
+
+.search-input-wrap .search-icon {
+  position: absolute;
+  left: 10px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--text-muted);
+  pointer-events: none;
 }
-.rally-ratio-sum.invalid {
-  color: var(--color-rose);
-  border-color: rgba(239, 68, 68, 0.4);
-  background: rgba(239, 68, 68, 0.08);
+
+.search-input-wrap input {
+  padding-left: 32px !important;
+  font-size: 12px !important;
+  height: 34px !important;
+  background: rgba(0, 0, 0, 0.3) !important;
+  border-radius: var(--radius-sm) !important;
 }
-.rally-ratio-grid {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
+
+/* 3-Column Hero Trio Grid (Infantry / Lancers / Marksman) */
+.hero-trio-box {
+  display: grid !important;
+  grid-template-columns: repeat(3, 1fr) !important;
+  gap: 10px !important;
+  margin-bottom: 14px !important;
+}
+
+@media (max-width: 680px) {
+  .hero-trio-box {
+    grid-template-columns: 1fr !important;
+  }
+}
+
+.hero-slot-item {
+  background: rgba(0, 0, 0, 0.22);
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  border-radius: 8px;
+  padding: 8px 10px;
+}
+
+.hero-trio-label {
+  display: flex !important;
+  align-items: center !important;
+  gap: 6px !important;
+  font-size: 11px !important;
+  font-weight: 700 !important;
+  margin-bottom: 6px !important;
+}
+
+.hero-trio-label.inf { color: var(--troop-inf) !important; }
+.hero-trio-label.lan { color: var(--troop-lan) !important; }
+.hero-trio-label.mrk { color: var(--troop-mrk) !important; }
+
+.troop-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  display: inline-block;
+  flex-shrink: 0;
+}
+.troop-dot.inf { background: var(--troop-inf); box-shadow: 0 0 5px var(--troop-inf); }
+.troop-dot.lan { background: var(--troop-lan); box-shadow: 0 0 5px var(--troop-lan); }
+.troop-dot.mrk { background: var(--troop-mrk); box-shadow: 0 0 5px var(--troop-mrk); }
+
+.hero-slot-item select {
+  font-size: 11px !important;
+  height: 32px !important;
+}
+
+/* Optional Per-Rally Custom Ratio Override */
+.rally-ratio-accordion {
+  background: rgba(0, 0, 0, 0.22);
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  border-radius: 8px;
+  padding: 10px 12px;
+  margin-bottom: 14px;
+}
+
+.custom-ratio-toggle-label {
+  display: flex;
+  align-items: center;
   gap: 8px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-secondary);
+  cursor: pointer;
+  user-select: none;
 }
-.rally-ratio-grid label {
-  font-size: 10px;
-  display: block;
-  margin-bottom: 2px;
+
+.custom-ratio-toggle-label input[type="checkbox"] {
+  accent-color: var(--color-cyan);
+  width: 15px;
+  height: 15px;
+  cursor: pointer;
 }
-.rally-ratio-grid label.inf { color: var(--troop-inf); }
-.rally-ratio-grid label.lan { color: var(--troop-lan); }
-.rally-ratio-grid label.mrk { color: var(--troop-mrk); }
-.rally-ratio-grid input { font-size: 11px; height: 32px; }
+
+.rally-custom-ratio-body {
+  margin-top: 12px;
+  padding-top: 10px;
+  border-top: 1px solid rgba(255, 255, 255, 0.07);
+}
+
+/* Target Joiner Heroes Grid (4 slots) */
+.rally-joiner-heroes {
+  margin-top: 12px;
+}
+
+.rally-joiner-header {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--text-secondary);
+  margin-bottom: 8px;
+}
+
+.rally-joiner-slot-grid {
+  display: grid !important;
+  grid-template-columns: repeat(4, 1fr) !important;
+  gap: 8px !important;
+}
+
+@media (max-width: 680px) {
+  .rally-joiner-slot-grid {
+    grid-template-columns: repeat(2, 1fr) !important;
+  }
+}
+
+.rally-joiner-slot {
+  background: rgba(0, 0, 0, 0.25) !important;
+  border: 1px solid rgba(255, 255, 255, 0.06) !important;
+  border-radius: 6px !important;
+  padding: 7px 8px !important;
+}
+
+.rally-joiner-slot-num {
+  font-size: 9px !important;
+  font-weight: 800 !important;
+  text-transform: uppercase !important;
+  letter-spacing: 0.05em !important;
+  color: var(--color-cyan) !important;
+  margin-bottom: 4px !important;
+}
+
+.rally-joiner-slot select {
+  font-size: 11px !important;
+  height: 30px !important;
+}
 
 /* Live ratio preview strip */
 .ratio-preview-bar {
   display: flex;
-  height: 5px;
+  height: 6px;
   border-radius: 4px;
   overflow: hidden;
-  margin-top: 8px;
+  margin-top: 10px;
   gap: 1px;
 }
 .ratio-preview-bar .rpb-inf { background: var(--troop-inf); flex-shrink: 0; transition: flex 0.2s ease; }
 .ratio-preview-bar .rpb-lan { background: var(--troop-lan); flex-shrink: 0; transition: flex 0.2s ease; }
 .ratio-preview-bar .rpb-mrk { background: var(--troop-mrk); flex-shrink: 0; transition: flex 0.2s ease; }
-
-/* Target joiner heroes inside each rally/garrison block */
-.rally-joiner-heroes {
-  margin-top: 12px;
-  padding-top: 10px;
-  border-top: 1px solid rgba(255, 255, 255, 0.06);
-}
-.rally-joiner-heroes-title {
-  font-size: 11px;
-  font-weight: 700;
-  color: var(--text-secondary);
-  margin-bottom: 8px;
-}
-.rally-joiner-slot-grid {
-  display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: 6px;
-}
-@media (max-width: 600px) {
-  .rally-joiner-slot-grid { grid-template-columns: repeat(2, 1fr); }
-}
-.rally-joiner-slot {
-  background: rgba(0,0,0,0.2);
-  border: 1px solid rgba(255,255,255,0.05);
-  border-radius: 6px;
-  padding: 7px 8px;
-}
-.rally-joiner-slot-num {
-  font-size: 9px;
-  color: var(--color-cyan);
-  font-weight: 700;
-  text-transform: uppercase;
-  margin-bottom: 3px;
-}
-.rally-joiner-slot select { font-size: 11px; height: 30px; }
 
 /* Result card classes */
 .rally-result-card {

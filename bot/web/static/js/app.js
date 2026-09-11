@@ -654,64 +654,64 @@ function renderCaptainSelectionBlocks() {
     return html;
   };
 
-  // Collect current selections before re-rendering
+  // Collect current selections before re-rendering so state is not lost
   const prevSelections = [];
   for (let i = 1; i <= count; i++) {
+    const customRatioCheck = document.getElementById(`sim-custom-ratio-check-${i}`);
     prevSelections.push({
       search: document.getElementById(`sim-captain-search-${i}`)?.value || '',
       cap: document.getElementById(`sim-captain-select-${i}`)?.value || '',
       inf: document.getElementById(`sim-captain-hero-inf-${i}`)?.value || '',
       lan: document.getElementById(`sim-captain-hero-lan-${i}`)?.value || '',
       mrk: document.getElementById(`sim-captain-hero-mrk-${i}`)?.value || '',
-      ratioInf: document.getElementById(`sim-rally-ratio-inf-${i}`)?.value || (formationType === 'garrison' ? '60' : '50'),
-      ratioLan: document.getElementById(`sim-rally-ratio-lan-${i}`)?.value || '20',
-      ratioMrk: document.getElementById(`sim-rally-ratio-mrk-${i}`)?.value || (formationType === 'garrison' ? '20' : '30'),
+      hasCustomRatio: customRatioCheck ? customRatioCheck.checked : false,
+      ratioInf: document.getElementById(`sim-rally-slider-inf-${i}`)?.value || document.getElementById(`sim-rally-ratio-inf-${i}`)?.value || (formationType === 'garrison' ? '60' : '50'),
+      ratioLan: document.getElementById(`sim-rally-slider-lan-${i}`)?.value || document.getElementById(`sim-rally-ratio-lan-${i}`)?.value || '20',
+      ratioMrk: document.getElementById(`sim-rally-slider-mrk-${i}`)?.value || document.getElementById(`sim-rally-ratio-mrk-${i}`)?.value || (formationType === 'garrison' ? '20' : '30'),
       jh: [1,2,3,4].map(s => document.getElementById(`sim-block-joiner-${i}-slot-${s}`)?.value || ''),
     });
   }
 
-  // Show/hide context-sensitive sections
+  // Ensure Section 2 global ratio section is ALWAYS visible (draggable range sliders)
   const globalRatioSection = document.getElementById('global-ratio-section');
   const garrisonCapacitySection = document.getElementById('garrison-capacity-section');
   const globalJoinerSection = document.getElementById('global-joiner-heroes-section');
+  const ratioSectionLabel = document.getElementById('ratio-section-label');
 
-  if (formationType === 'garrison') {
-    // Garrison: global ratio sliders visible (captain uses same ratio), no per-block ratio
-    if (globalRatioSection) globalRatioSection.style.display = '';
-    if (garrisonCapacitySection) garrisonCapacitySection.style.display = '';
-    // Global joiner heroes section hidden — each block has its own
-    if (globalJoinerSection) globalJoinerSection.style.display = 'none';
-  } else if (count === 1) {
-    // Single rally: hide global ratio (ratio is in captain block), hide capacity, show global joiner heroes
-    if (globalRatioSection) globalRatioSection.style.display = 'none';
-    if (garrisonCapacitySection) garrisonCapacitySection.style.display = 'none';
-    if (globalJoinerSection) globalJoinerSection.style.display = 'none';
-  } else {
-    // Multi-rally: hide global ratio (each block has own), hide capacity, hide global joiner (each block has own)
-    if (globalRatioSection) globalRatioSection.style.display = 'none';
-    if (garrisonCapacitySection) garrisonCapacitySection.style.display = 'none';
-    if (globalJoinerSection) globalJoinerSection.style.display = 'none';
+  if (globalRatioSection) globalRatioSection.style.display = '';
+  if (globalJoinerSection) globalJoinerSection.style.display = 'none';
+
+  if (ratioSectionLabel) {
+    if (formationType === 'garrison') {
+      ratioSectionLabel.textContent = 'Garrison Troop Ratio (Sliders & Points)';
+    } else if (count > 1) {
+      ratioSectionLabel.textContent = 'Default Formation Ratio (Inherited by all rallies)';
+    } else {
+      ratioSectionLabel.textContent = 'Rally Troop Ratio (Sliders & Points)';
+    }
   }
 
-  // Determine if we show ratio per block (all rally types; garrison uses global sliders only)
-  const showPerBlockRatio = formationType !== 'garrison';
+  if (garrisonCapacitySection) {
+    garrisonCapacitySection.style.display = formationType === 'garrison' ? '' : 'none';
+  }
 
   let blocksHtml = '';
 
   for (let i = 1; i <= count; i++) {
     const isGarrison = formationType === 'garrison';
+    const badgeText = isGarrison ? 'Garrison' : (count > 1 ? `Rally ${i}` : 'Rally');
     const blockTitle = isGarrison
-      ? 'Garrison Captain'
-      : (count > 1 ? `Rally ${i} — Captain` : 'Rally Captain');
-    const blockHint = `Hero slots: Infantry (Left) · Lancer (Mid) · Marksman (Right) — Gen ≤ ${selectedGen}`;
+      ? 'Garrison Captain & Defense Setup'
+      : (count > 1 ? `Rally ${i} Captain & Hero Slots` : 'Rally Captain & Hero Slots');
 
     const curSearch = prevSelections[i - 1]?.search || '';
-    const curRatioInf = prevSelections[i - 1]?.ratioInf || (isGarrison ? '60' : '50');
+    const hasCustomRatio = prevSelections[i - 1]?.hasCustomRatio || false;
+    const curRatioInf = prevSelections[i - 1]?.ratioInf || '50';
     const curRatioLan = prevSelections[i - 1]?.ratioLan || '20';
-    const curRatioMrk = prevSelections[i - 1]?.ratioMrk || (isGarrison ? '20' : '30');
+    const curRatioMrk = prevSelections[i - 1]?.ratioMrk || '30';
     const ratioSum = Number(curRatioInf) + Number(curRatioLan) + Number(curRatioMrk);
 
-    // Joiner heroes for this block
+    // Joiner hero slots for this block
     const jhOptions = (state.heroCatalog || []).map(h =>
       `<option value="${escapeHtml(h.name)}">${escapeHtml(h.name)} — ${escapeHtml(h.buff || '')}</option>`
     ).join('');
@@ -732,81 +732,101 @@ function renderCaptainSelectionBlocks() {
         </div>`;
     }).join('');
 
-    blocksHtml += `
-      <div class="rally-block">
-        <div class="rally-block-title">${blockTitle}</div>
-        <div class="rally-block-hint">${blockHint}</div>
+    // Custom ratio accordion is only shown for multi-rally (count > 1)
+    const showCustomRatioAccordion = !isGarrison && count > 1;
 
-        <!-- Captain search + dropdown stacked -->
-        <div class="captain-search-wrap">
-          <input type="text" class="form-input sim-captain-search-input" id="sim-captain-search-${i}" data-index="${i}" placeholder="Search captain by player name..." value="${escapeHtml(curSearch)}">
+    blocksHtml += `
+      <div class="rally-card">
+        <div class="rally-card-header">
+          <div class="rally-card-identity">
+            <span class="rally-badge ${isGarrison ? 'garrison' : 'rally'}">${badgeText}</span>
+            <span class="rally-subtitle">${escapeHtml(blockTitle)}</span>
+          </div>
+          <span class="rally-gen-tag">Hero Gen &le; ${selectedGen}</span>
         </div>
-        <div class="captain-select-wrap">
+
+        <!-- Captain Selection with Live Search -->
+        <div class="captain-picker-box">
+          <label class="picker-label">Captain Selection</label>
+          <div class="search-input-wrap">
+            <svg class="search-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+            <input type="text" class="form-input sim-captain-search-input" id="sim-captain-search-${i}" data-index="${i}" placeholder="Search captain by player name..." value="${escapeHtml(curSearch)}">
+          </div>
           <select class="form-input sim-captain-select-input" id="sim-captain-select-${i}" data-index="${i}">
             ${makePlayerOptionsHtml(curSearch)}
           </select>
         </div>
 
-        <!-- 3 hero slots -->
-        <div class="hero-trio-grid">
-          <div>
-            <label class="hero-trio-label inf">Infantry Hero (Left)</label>
+        <!-- 3-Column Hero Trio Grid -->
+        <div class="hero-trio-box">
+          <div class="hero-slot-item">
+            <label class="hero-trio-label inf"><span class="troop-dot inf"></span> Infantry (Left)</label>
             <select class="form-input" id="sim-captain-hero-inf-${i}">
               ${makeHeroOptionsHtml('infantry', infHeroes)}
             </select>
           </div>
-          <div>
-            <label class="hero-trio-label lan">Lancer Hero (Mid)</label>
+          <div class="hero-slot-item">
+            <label class="hero-trio-label lan"><span class="troop-dot lan"></span> Lancer (Mid)</label>
             <select class="form-input" id="sim-captain-hero-lan-${i}">
               ${makeHeroOptionsHtml('lancer', lanHeroes)}
             </select>
           </div>
-          <div>
-            <label class="hero-trio-label mrk">Marksman Hero (Right)</label>
+          <div class="hero-slot-item">
+            <label class="hero-trio-label mrk"><span class="troop-dot mrk"></span> Marksman (Right)</label>
             <select class="form-input" id="sim-captain-hero-mrk-${i}">
               ${makeHeroOptionsHtml('marksman', mrkHeroes)}
             </select>
           </div>
         </div>
 
-        ${showPerBlockRatio ? `
-        <!-- Per-rally ratio -->
-        <div class="rally-ratio-section">
-          <div class="rally-ratio-header">
-            <span class="rally-ratio-label">Troop Ratio</span>
-            <div style="display:flex;align-items:center;gap:6px;">
-              <span class="rally-ratio-sum ${ratioSum === 100 ? 'valid' : 'invalid'}" id="sim-rally-ratio-sum-${i}">${ratioSum}%</span>
-              <div class="preset-pills" style="margin:0;">
-                <button type="button" class="btn-preset btn-rally-ratio-preset" data-index="${i}" data-inf="50" data-lan="20" data-mrk="30" style="padding:2px 6px;font-size:10px;">50/20/30</button>
-                <button type="button" class="btn-preset btn-rally-ratio-preset" data-index="${i}" data-inf="60" data-lan="20" data-mrk="20" style="padding:2px 6px;font-size:10px;">60/20/20</button>
-                <button type="button" class="btn-preset btn-rally-ratio-preset" data-index="${i}" data-inf="40" data-lan="30" data-mrk="30" style="padding:2px 6px;font-size:10px;">40/30/30</button>
+        ${showCustomRatioAccordion ? `
+        <!-- Optional Per-Rally Custom Ratio Override using draggable range sliders -->
+        <div class="rally-ratio-accordion">
+          <label class="custom-ratio-toggle-label">
+            <input type="checkbox" class="sim-custom-ratio-check" id="sim-custom-ratio-check-${i}" data-index="${i}" ${hasCustomRatio ? 'checked' : ''}>
+            <span>Customize Ratio for Rally ${i} <span id="sim-custom-ratio-hint-${i}" style="color:var(--text-muted);font-weight:400;">(${hasCustomRatio ? 'Custom ratio active' : `Uses Section 2 ratio: ${state.sim.inf}/${state.sim.lan}/${state.sim.mrk}%`})</span></span>
+          </label>
+          <div class="rally-custom-ratio-body" id="sim-custom-ratio-body-${i}" style="${hasCustomRatio ? '' : 'display:none;'}">
+            <div class="slider-row">
+              <div class="slider-type-badge"><span class="troop-bullet inf"></span><span>Infantry</span></div>
+              <input type="range" class="range-slider slider-inf-thumb" id="sim-rally-slider-inf-${i}" min="0" max="100" value="${curRatioInf}">
+              <div class="slider-val-wrap">
+                <input type="number" class="num-input" id="sim-rally-ratio-inf-${i}" min="0" max="100" value="${curRatioInf}">%
               </div>
             </div>
-          </div>
-          <div class="rally-ratio-grid">
-            <div>
-              <label class="inf">Infantry %</label>
-              <input type="number" class="form-input sim-rally-ratio-inf" id="sim-rally-ratio-inf-${i}" min="0" max="100" value="${curRatioInf}">
+            <div class="slider-row">
+              <div class="slider-type-badge"><span class="troop-bullet lan"></span><span>Lancers</span></div>
+              <input type="range" class="range-slider slider-lan-thumb" id="sim-rally-slider-lan-${i}" min="0" max="100" value="${curRatioLan}">
+              <div class="slider-val-wrap">
+                <input type="number" class="num-input" id="sim-rally-ratio-lan-${i}" min="0" max="100" value="${curRatioLan}">%
+              </div>
             </div>
-            <div>
-              <label class="lan">Lancer %</label>
-              <input type="number" class="form-input sim-rally-ratio-lan" id="sim-rally-ratio-lan-${i}" min="0" max="100" value="${curRatioLan}">
+            <div class="slider-row">
+              <div class="slider-type-badge"><span class="troop-bullet mrk"></span><span>Marksman</span></div>
+              <input type="range" class="range-slider slider-mrk-thumb" id="sim-rally-slider-mrk-${i}" min="0" max="100" value="${curRatioMrk}">
+              <div class="slider-val-wrap">
+                <input type="number" class="num-input" id="sim-rally-ratio-mrk-${i}" min="0" max="100" value="${curRatioMrk}">%
+              </div>
             </div>
-            <div>
-              <label class="mrk">Marksman %</label>
-              <input type="number" class="form-input sim-rally-ratio-mrk" id="sim-rally-ratio-mrk-${i}" min="0" max="100" value="${curRatioMrk}">
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-top:8px;flex-wrap:wrap;gap:6px;">
+              <span class="ratio-sum-badge ${ratioSum === 100 ? 'valid' : 'invalid'}" id="sim-rally-ratio-sum-${i}">Total: ${ratioSum}%</span>
+              <div class="preset-pills" style="margin:0;">
+                <button type="button" class="btn-preset btn-rally-ratio-preset" data-index="${i}" data-inf="50" data-lan="20" data-mrk="30">50/20/30</button>
+                <button type="button" class="btn-preset btn-rally-ratio-preset" data-index="${i}" data-inf="60" data-lan="20" data-mrk="20">60/20/20</button>
+                <button type="button" class="btn-preset btn-rally-ratio-preset" data-index="${i}" data-inf="40" data-lan="30" data-mrk="30">40/30/30</button>
+              </div>
             </div>
-          </div>
-          <div class="ratio-preview-bar" id="sim-rally-ratio-preview-${i}">
-            <div class="rpb-inf" style="flex:${curRatioInf}"></div>
-            <div class="rpb-lan" style="flex:${curRatioLan}"></div>
-            <div class="rpb-mrk" style="flex:${curRatioMrk}"></div>
+            <div class="ratio-preview-bar" id="sim-rally-ratio-preview-${i}">
+              <div class="rpb-inf" style="flex:${curRatioInf}"></div>
+              <div class="rpb-lan" style="flex:${curRatioLan}"></div>
+              <div class="rpb-mrk" style="flex:${curRatioMrk}"></div>
+            </div>
           </div>
         </div>` : ''}
 
-        <!-- Per-block Target Joiner Heroes (4 slots) -->
+        <!-- Target Joiner Heroes (4 slots) -->
         <div class="rally-joiner-heroes">
-          <div class="rally-joiner-heroes-title">Target Joiner Heroes (4 Slots)</div>
+          <div class="rally-joiner-header">Target Joiner Heroes (4 Slots)</div>
           <div class="rally-joiner-slot-grid">
             ${jhSlots}
           </div>
@@ -826,18 +846,35 @@ function renderCaptainSelectionBlocks() {
     const infEl = document.getElementById(`sim-captain-hero-inf-${i}`);
     const lanEl = document.getElementById(`sim-captain-hero-lan-${i}`);
     const mrkEl = document.getElementById(`sim-captain-hero-mrk-${i}`);
-    const ratioInfEl = document.getElementById(`sim-rally-ratio-inf-${i}`);
-    const ratioLanEl = document.getElementById(`sim-rally-ratio-lan-${i}`);
-    const ratioMrkEl = document.getElementById(`sim-rally-ratio-mrk-${i}`);
+
+    const customCheck = document.getElementById(`sim-custom-ratio-check-${i}`);
+    const customBody = document.getElementById(`sim-custom-ratio-body-${i}`);
+    const customHint = document.getElementById(`sim-custom-ratio-hint-${i}`);
+
+    const sliderInf = document.getElementById(`sim-rally-slider-inf-${i}`);
+    const numInf = document.getElementById(`sim-rally-ratio-inf-${i}`);
+    const sliderLan = document.getElementById(`sim-rally-slider-lan-${i}`);
+    const numLan = document.getElementById(`sim-rally-ratio-lan-${i}`);
+    const sliderMrk = document.getElementById(`sim-rally-slider-mrk-${i}`);
+    const numMrk = document.getElementById(`sim-rally-ratio-mrk-${i}`);
 
     if (prev) {
       if (capEl && prev.cap && capEl.querySelector(`option[value="${prev.cap}"]`)) capEl.value = prev.cap;
       if (infEl && prev.inf && infEl.querySelector(`option[value="${prev.inf}"]`)) infEl.value = prev.inf;
       if (lanEl && prev.lan && lanEl.querySelector(`option[value="${prev.lan}"]`)) lanEl.value = prev.lan;
       if (mrkEl && prev.mrk && mrkEl.querySelector(`option[value="${prev.mrk}"]`)) mrkEl.value = prev.mrk;
-      if (ratioInfEl && prev.ratioInf) ratioInfEl.value = prev.ratioInf;
-      if (ratioLanEl && prev.ratioLan) ratioLanEl.value = prev.ratioLan;
-      if (ratioMrkEl && prev.ratioMrk) ratioMrkEl.value = prev.ratioMrk;
+      if (sliderInf && prev.ratioInf) sliderInf.value = prev.ratioInf;
+      if (numInf && prev.ratioInf) numInf.value = prev.ratioInf;
+      if (sliderLan && prev.ratioLan) sliderLan.value = prev.ratioLan;
+      if (numLan && prev.ratioLan) numLan.value = prev.ratioLan;
+      if (sliderMrk && prev.ratioMrk) sliderMrk.value = prev.ratioMrk;
+      if (numMrk && prev.ratioMrk) numMrk.value = prev.ratioMrk;
+      if (customCheck && prev.hasCustomRatio) {
+        customCheck.checked = true;
+        if (customBody) customBody.style.display = 'block';
+        if (customHint) customHint.textContent = '(Custom ratio active)';
+      }
+
       // Restore joiner heroes
       [1,2,3,4].forEach((s, sIdx) => {
         const jhEl = document.getElementById(`sim-block-joiner-${i}-slot-${s}`);
@@ -857,18 +894,36 @@ function renderCaptainSelectionBlocks() {
       });
     }
 
-    // Live ratio preview update
-    if (showPerBlockRatio && ratioInfEl && ratioLanEl && ratioMrkEl) {
-      const updateRatioPreview = () => {
-        const inf = Number(ratioInfEl.value) || 0;
-        const lan = Number(ratioLanEl.value) || 0;
-        const mrk = Number(ratioMrkEl.value) || 0;
+    // Custom ratio accordion toggle
+    if (customCheck && customBody) {
+      customCheck.addEventListener('change', () => {
+        if (customCheck.checked) {
+          customBody.style.display = 'block';
+          if (customHint) customHint.textContent = '(Custom ratio active)';
+        } else {
+          customBody.style.display = 'none';
+          if (customHint) customHint.textContent = `(Uses Section 2 ratio: ${state.sim.inf}/${state.sim.lan}/${state.sim.mrk}%)`;
+        }
+      });
+    }
+
+    // Custom rally range sliders <-> number inputs sync
+    if (sliderInf && numInf && sliderLan && numLan && sliderMrk && numMrk) {
+      const updateRallyRatio = (source, val) => {
+        val = Math.max(0, Math.min(100, Number(val) || 0));
+        if (source === 'inf') { sliderInf.value = val; numInf.value = val; }
+        if (source === 'lan') { sliderLan.value = val; numLan.value = val; }
+        if (source === 'mrk') { sliderMrk.value = val; numMrk.value = val; }
+
+        const inf = Number(sliderInf.value) || 0;
+        const lan = Number(sliderLan.value) || 0;
+        const mrk = Number(sliderMrk.value) || 0;
         const sum = inf + lan + mrk;
         const sumEl = document.getElementById(`sim-rally-ratio-sum-${i}`);
         const previewEl = document.getElementById(`sim-rally-ratio-preview-${i}`);
         if (sumEl) {
-          sumEl.textContent = `${sum}%`;
-          sumEl.className = `rally-ratio-sum ${sum === 100 ? 'valid' : 'invalid'}`;
+          sumEl.textContent = `Total: ${sum}%`;
+          sumEl.className = `ratio-sum-badge ${sum === 100 ? 'valid' : 'invalid'}`;
         }
         if (previewEl) {
           const bars = previewEl.querySelectorAll('div');
@@ -877,23 +932,33 @@ function renderCaptainSelectionBlocks() {
           if (bars[2]) bars[2].style.flex = mrk;
         }
       };
-      ratioInfEl.addEventListener('input', updateRatioPreview);
-      ratioLanEl.addEventListener('input', updateRatioPreview);
-      ratioMrkEl.addEventListener('input', updateRatioPreview);
+
+      sliderInf.addEventListener('input', (e) => updateRallyRatio('inf', e.target.value));
+      numInf.addEventListener('input', (e) => updateRallyRatio('inf', e.target.value));
+      sliderLan.addEventListener('input', (e) => updateRallyRatio('lan', e.target.value));
+      numLan.addEventListener('input', (e) => updateRallyRatio('lan', e.target.value));
+      sliderMrk.addEventListener('input', (e) => updateRallyRatio('mrk', e.target.value));
+      numMrk.addEventListener('input', (e) => updateRallyRatio('mrk', e.target.value));
     }
   }
 
-  // Wire ratio preset buttons
+  // Wire custom ratio preset buttons
   container.querySelectorAll('.btn-rally-ratio-preset').forEach(btn => {
     btn.addEventListener('click', (e) => {
       e.preventDefault();
       const idx = btn.dataset.index;
-      const infEl = document.getElementById(`sim-rally-ratio-inf-${idx}`);
-      const lanEl = document.getElementById(`sim-rally-ratio-lan-${idx}`);
-      const mrkEl = document.getElementById(`sim-rally-ratio-mrk-${idx}`);
-      if (infEl) { infEl.value = btn.dataset.inf; infEl.dispatchEvent(new Event('input')); }
-      if (lanEl) { lanEl.value = btn.dataset.lan; lanEl.dispatchEvent(new Event('input')); }
-      if (mrkEl) { mrkEl.value = btn.dataset.mrk; mrkEl.dispatchEvent(new Event('input')); }
+      const sliderInf = document.getElementById(`sim-rally-slider-inf-${idx}`);
+      const numInf = document.getElementById(`sim-rally-ratio-inf-${idx}`);
+      const sliderLan = document.getElementById(`sim-rally-slider-lan-${idx}`);
+      const numLan = document.getElementById(`sim-rally-ratio-lan-${idx}`);
+      const sliderMrk = document.getElementById(`sim-rally-slider-mrk-${idx}`);
+      const numMrk = document.getElementById(`sim-rally-ratio-mrk-${idx}`);
+
+      if (sliderInf && numInf) { sliderInf.value = btn.dataset.inf; numInf.value = btn.dataset.inf; }
+      if (sliderLan && numLan) { sliderLan.value = btn.dataset.lan; numLan.value = btn.dataset.lan; }
+      if (sliderMrk && numMrk) { sliderMrk.value = btn.dataset.mrk; numMrk.value = btn.dataset.mrk; }
+
+      if (sliderInf) sliderInf.dispatchEvent(new Event('input'));
     });
   });
 }
@@ -1121,12 +1186,37 @@ function syncRatio(source, val) {
     elements.numMrk.value = val;
   }
   updateRatioBadge();
+
+  // Update Section 2 live preview strip
+  const previewInf = document.getElementById('rpb-inf');
+  const previewLan = document.getElementById('rpb-lan');
+  const previewMrk = document.getElementById('rpb-mrk');
+  if (previewInf) previewInf.style.flex = state.sim.inf;
+  if (previewLan) previewLan.style.flex = state.sim.lan;
+  if (previewMrk) previewMrk.style.flex = state.sim.mrk;
+
+  // Update hint in rally cards where custom ratio is NOT enabled
+  const rallyCountEl = document.getElementById('sim-rally-count');
+  const count = parseInt(rallyCountEl?.value || '1', 10);
+  for (let i = 1; i <= count; i++) {
+    const check = document.getElementById(`sim-custom-ratio-check-${i}`);
+    const hint = document.getElementById(`sim-custom-ratio-hint-${i}`);
+    if (check && !check.checked && hint) {
+      hint.textContent = `(Uses Section 2 ratio: ${state.sim.inf}/${state.sim.lan}/${state.sim.mrk}%)`;
+    }
+  }
 }
 
 function getCaptainPayloadData() {
   const formationType = state.sim.formation_type || 'rally';
   const rallyCountEl = document.getElementById('sim-rally-count');
   const count = formationType === 'garrison' ? 1 : parseInt(rallyCountEl?.value || '1', 10);
+
+  const masterRatio = {
+    infantry: Number(state.sim.inf) || 50,
+    lancers: Number(state.sim.lan) || 20,
+    marksman: Number(state.sim.mrk) || 30,
+  };
 
   const capIdVal = document.getElementById('sim-captain-select-1')?.value;
   const infHero = document.getElementById('sim-captain-hero-inf-1')?.value || '';
@@ -1139,15 +1229,25 @@ function getCaptainPayloadData() {
     const cInfHero = document.getElementById(`sim-captain-hero-inf-${i}`)?.value || '';
     const cLanHero = document.getElementById(`sim-captain-hero-lan-${i}`)?.value || '';
     const cMrkHero = document.getElementById(`sim-captain-hero-mrk-${i}`)?.value || '';
-    const infRatio = Number(document.getElementById(`sim-rally-ratio-inf-${i}`)?.value || 50);
-    const lanRatio = Number(document.getElementById(`sim-rally-ratio-lan-${i}`)?.value || 20);
-    const mrkRatio = Number(document.getElementById(`sim-rally-ratio-mrk-${i}`)?.value || 30);
+
+    // Check if this rally has custom ratio enabled
+    const customRatioCheck = document.getElementById(`sim-custom-ratio-check-${i}`);
+    let rallyRatio;
+    if (customRatioCheck && customRatioCheck.checked) {
+      const infR = Number(document.getElementById(`sim-rally-slider-inf-${i}`)?.value || document.getElementById(`sim-rally-ratio-inf-${i}`)?.value || masterRatio.infantry);
+      const lanR = Number(document.getElementById(`sim-rally-slider-lan-${i}`)?.value || document.getElementById(`sim-rally-ratio-lan-${i}`)?.value || masterRatio.lancers);
+      const mrkR = Number(document.getElementById(`sim-rally-slider-mrk-${i}`)?.value || document.getElementById(`sim-rally-ratio-mrk-${i}`)?.value || masterRatio.marksman);
+      rallyRatio = { infantry: infR, lancers: lanR, marksman: mrkR };
+    } else {
+      rallyRatio = { ...masterRatio };
+    }
+
     const joiners = [1, 2, 3, 4].map(s => document.getElementById(`sim-block-joiner-${i}-slot-${s}`)?.value).filter(Boolean);
 
     captainsList.push({
       captain_id: cId ? parseInt(cId, 10) : null,
       captain_heroes: [cInfHero, cLanHero, cMrkHero].filter(Boolean),
-      ratio: { infantry: infRatio, lancers: lanRatio, marksman: mrkRatio },
+      ratio: rallyRatio,
       target_joiners: joiners,
     });
   }

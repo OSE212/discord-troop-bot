@@ -8,7 +8,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Outfit:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="/static/css/style.css?v=2.4">
+  <link rel="stylesheet" href="/static/css/style.css?v=3.5">
 </head>
 <body>
   <div class="app-container">
@@ -423,7 +423,10 @@
           <div class="glass-card setup-card">
 
             <!-- SECTION 1: Formation Setup -->
-            <div class="sim-section-heading">1 — Formation Setup</div>
+            <div class="panel-section-header">
+              <span class="panel-section-badge">1</span>
+              <h3 class="panel-section-title">Formation Setup</h3>
+            </div>
 
             <!-- Generation & Alliance Tag Filters -->
             <div class="form-group">
@@ -437,7 +440,6 @@
                 </select>
               </div>
             </div>
-
 
             <div class="form-group">
               <label class="form-label">Battle Mode</label>
@@ -512,14 +514,16 @@
               </select>
             </div>
 
-            <!-- SECTION 2: Ratio & Capacity -->
-            <hr class="sim-section-divider">
-            <div class="sim-section-heading">2 — Ratio &amp; Capacity</div>
+            <!-- SECTION 2: Troop Ratio (ALWAYS VISIBLE!) -->
+            <div class="panel-section-header mt-24">
+              <span class="panel-section-badge">2</span>
+              <h3 class="panel-section-title">Troop Ratio (Inf / Lan / Mrk %)</h3>
+            </div>
 
-            <!-- Global ratio sliders (shown for Garrison only; hidden for Rally) -->
+            <!-- Global ratio sliders (Always visible with draggable points) -->
             <div id="global-ratio-section" class="form-group">
               <div class="label-with-meta">
-                <label class="form-label">Troop Ratio Percentages</label>
+                <label class="form-label" id="ratio-section-label">Default Formation Ratio</label>
                 <span class="ratio-sum-badge valid" id="ratio-sum-badge">Total: 100%</span>
               </div>
 
@@ -529,7 +533,7 @@
                   <span class="troop-bullet inf"></span>
                   <span>Infantry</span>
                 </div>
-                <input type="range" class="range-slider" id="slider-inf" min="0" max="100" value="50">
+                <input type="range" class="range-slider slider-inf-thumb" id="slider-inf" min="0" max="100" value="50">
                 <div class="slider-val-wrap">
                   <input type="number" class="num-input" id="num-inf" min="0" max="100" value="50">%
                 </div>
@@ -541,7 +545,7 @@
                   <span class="troop-bullet lan"></span>
                   <span>Lancers</span>
                 </div>
-                <input type="range" class="range-slider" id="slider-lan" min="0" max="100" value="20">
+                <input type="range" class="range-slider slider-lan-thumb" id="slider-lan" min="0" max="100" value="20">
                 <div class="slider-val-wrap">
                   <input type="number" class="num-input" id="num-lan" min="0" max="100" value="20">%
                 </div>
@@ -553,7 +557,7 @@
                   <span class="troop-bullet mrk"></span>
                   <span>Marksman</span>
                 </div>
-                <input type="range" class="range-slider" id="slider-mrk" min="0" max="100" value="30">
+                <input type="range" class="range-slider slider-mrk-thumb" id="slider-mrk" min="0" max="100" value="30">
                 <div class="slider-val-wrap">
                   <input type="number" class="num-input" id="num-mrk" min="0" max="100" value="30">%
                 </div>
@@ -561,10 +565,10 @@
 
               <div class="preset-pills mt-8">
                 <span class="preset-hint">Presets:</span>
-                <button class="btn-preset" data-inf="50" data-lan="20" data-mrk="30">50 / 20 / 30</button>
-                <button class="btn-preset" data-inf="60" data-lan="20" data-mrk="20">60 / 20 / 20</button>
-                <button class="btn-preset" data-inf="40" data-lan="30" data-mrk="30">40 / 30 / 30</button>
-                <button class="btn-preset" data-inf="34" data-lan="33" data-mrk="33">Balanced</button>
+                <button type="button" class="btn-preset" data-inf="50" data-lan="20" data-mrk="30">50 / 20 / 30</button>
+                <button type="button" class="btn-preset" data-inf="60" data-lan="20" data-mrk="20">60 / 20 / 20</button>
+                <button type="button" class="btn-preset" data-inf="40" data-lan="30" data-mrk="30">40 / 30 / 30</button>
+                <button type="button" class="btn-preset" data-inf="34" data-lan="33" data-mrk="33">Balanced</button>
               </div>
 
               <!-- Live ratio preview strip -->
@@ -581,22 +585,23 @@
               <label class="form-label">Formation Capacity</label>
               <input type="number" class="form-input" id="sim-capacity" value="1500000" placeholder="e.g. 1,500,000">
               <div class="preset-pills mt-8">
-                <button class="btn-preset" data-capacity="1200000">1.2M</button>
-                <button class="btn-preset" data-capacity="1500000">1.5M</button>
-                <button class="btn-preset" data-capacity="2000000">2.0M</button>
-                <button class="btn-preset" data-capacity="2500000">2.5M</button>
+                <button type="button" class="btn-preset" data-capacity="1200000">1.2M</button>
+                <button type="button" class="btn-preset" data-capacity="1500000">1.5M</button>
+                <button type="button" class="btn-preset" data-capacity="2000000">2.0M</button>
+                <button type="button" class="btn-preset" data-capacity="2500000">2.5M</button>
               </div>
             </div>
 
             <!-- SECTION 3: Leadership -->
-            <hr class="sim-section-divider">
-            <div class="sim-section-heading">3 — Leadership</div>
+            <div class="panel-section-header mt-24">
+              <span class="panel-section-badge">3</span>
+              <h3 class="panel-section-title">Leadership &amp; Captains</h3>
+            </div>
 
             <!-- Dynamic Captains Container (renders captain blocks per rally / garrison) -->
             <div id="sim-captains-container"></div>
 
-
-            <button class="btn btn-primary btn-block btn-lg" id="btn-run-simulation">
+            <button class="btn btn-primary btn-block btn-lg mt-20" id="btn-run-simulation">
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
                 <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/>
               </svg>
@@ -1213,6 +1218,6 @@
   <!-- TOAST CONTAINER -->
   <div class="toast-container" id="toast-container"></div>
 
-  <script src="/static/js/app.js?v=2.4"></script>
+  <script src="/static/js/app.js?v=3.5"></script>
 </body>
 </html>
