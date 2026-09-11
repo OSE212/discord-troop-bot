@@ -1312,6 +1312,11 @@ async def handle_calculate_rallies(request: web.Request) -> web.Response:
         generation = int(data.get("generation", 1))
         online_only = bool(data.get("online_only", True))
         rally_captains = data.get("rally_captains") or []
+        default_cap = data.get("capacity")
+        if default_cap:
+            for rc in rally_captains:
+                if isinstance(rc, dict) and not rc.get("capacity"):
+                    rc["capacity"] = default_cap
     except Exception:
         return web.json_response({"error": "Invalid JSON payload"}, status=400)
         

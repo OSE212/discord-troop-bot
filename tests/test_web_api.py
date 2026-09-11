@@ -308,5 +308,50 @@ Joiner1,J01,100k,25,25,25
     asyncio.run(_test())
 
 
+def test_rallies_calculate_with_capacities(tmp_path):
+    async def _test():
+        app, settings = create_test_app_and_settings(tmp_path)
+        server = TestServer(app)
+        client = TestClient(server)
+        await client.start_server()
+
+        try:
+            await client.post("/api/auth/login", json={"passkey": "secretpass123"})
+            csv_content = """Player Name,Account ID,March Capacity,Infantry Level,Lancer Level,Marksman Level
+Leader1,L01,100k,30,28,29
+JoinerA,JA1,80k,28,30,27
+JoinerB,JB1,80k,25,25,25
+JoinerC,JC1,80k,25,25,25
+"""
+            await client.post("/api/players/import", json={"csv_text": csv_content})
+
+            rallies_payload = {
+                "rally_count": 1,
+                "online_only": False,
+                "rally_captains": [
+                    {
+                        "player_name": "Leader1",
+                        "capacity": 200000,
+                        "ratio": {"infantry": 50, "lancers": 20, "marksman": 30}
+                    }
+                ],
+                "alliance_tag": None
+            }
+            resp = await client.post("/api/rallies/calculate", json=rallies_payload)
+            assert resp.status == 200
+            data = await resp.json()
+            assert data["status"] == "success"
+            rally = data["rallies"][0]
+            assert rally["max_capacity"] == 200000
+            assert rally["total_assigned"] <= 200000
+            # Leader1 (100k) + Joiner (80k) + Joiner (capped at 20k to fill exactly 200k)
+            assert rally["total_assigned"] == 200000
+        finally:
+            await client.close()
+
+    asyncio.run(_test())
+
+
+
 
 

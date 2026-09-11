@@ -161,6 +161,16 @@ class MultiRallyAssignmentEngine:
                     "marksman": float(ratio.get("marksman", 30)),
                 }
 
+            # Support custom capacity per rally if specified (leader limit)
+            target_capacity = 2000000
+            if cap_info and isinstance(cap_info, dict):
+                raw_cap = cap_info.get("capacity")
+                if raw_cap:
+                    try:
+                        target_capacity = int(raw_cap)
+                    except (ValueError, TypeError):
+                        pass
+
             # Support custom joiners override per rally if specified in rally_captains
             custom_joiners = [j for j in cap_info.get("target_joiners", []) if j] if cap_info else []
             joiner_list = custom_joiners if custom_joiners else heroes["joiners"]
@@ -169,10 +179,23 @@ class MultiRallyAssignmentEngine:
             primary_cap = cap_heroes[0] if cap_heroes else heroes["primary_captain"]
 
             rows: List[PlayerAssignmentRow] = []
+            assigned_capacity = 0
             for rank, p in enumerate(group_players):
                 march = p.get("march_limit", 160000)
+
+                # Captain (rank == 0) is always assigned.
+                # For subsequent joiners, check if rally capacity is reached.
+                if rank > 0 and target_capacity > 0 and assigned_capacity >= target_capacity:
+                    continue
+
+                effective_march = march
+                if rank > 0 and target_capacity > 0 and (assigned_capacity + march) > target_capacity:
+                    effective_march = max(0, target_capacity - assigned_capacity)
+                    if effective_march <= 0:
+                        continue
+
                 typed_ratio = _ratio_to_troop_type(ratio)
-                counts = compute_targets(typed_ratio, march)
+                counts = compute_targets(typed_ratio, effective_march)
 
                 # Extract aggregated helios/level for display
                 troops = p.get("troops", {})
@@ -188,7 +211,7 @@ class MultiRallyAssignmentEngine:
 
                 rows.append(PlayerAssignmentRow(
                     player_name=p.get("name", "Unknown"),
-                    march_limit=march,
+                    march_limit=effective_march,
                     infantry_count=counts.get(TroopType.INFANTRY, 0),
                     lancer_count=counts.get(TroopType.LANCERS, 0),
                     marksman_count=counts.get(TroopType.MARKSMAN, 0),
@@ -198,6 +221,7 @@ class MultiRallyAssignmentEngine:
                     helios=has_helios,
                     fc_level=avg_level,
                 ))
+                assigned_capacity += effective_march
 
             # Compute avg_fc_level for this rally's players
             fc_vals = [r.fc_level for r in rows if r.fc_level is not None]
@@ -210,6 +234,8 @@ class MultiRallyAssignmentEngine:
                 ratio=ratio,
                 players=rows,
                 avg_fc_level=avg_fc,
+                max_capacity=target_capacity,
+                total_assigned=assigned_capacity,
             ))
 
         return result

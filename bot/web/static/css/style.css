@@ -3435,3 +3435,36 @@ body {
   color: var(--text-muted);
 }
 
+/* Rally Capacity Box */
+.rally-capacity-box {
+  margin-bottom: 14px;
+  padding: 10px 14px;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 8px;
+  transition: border-color 0.2s;
+}
+.rally-capacity-box:focus-within {
+  border-color: rgba(0, 242, 254, 0.35);
+}
+.rally-capacity-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 6px;
+}
+.rally-capacity-header .picker-label {
+  margin-bottom: 0;
+}
+.rally-capacity-input-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.rally-capacity-input-row .sim-rally-capacity-input {
+  flex: 1;
+  min-width: 140px;
+}
+
+

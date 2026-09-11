@@ -665,6 +665,7 @@ function renderCaptainSelectionBlocks() {
     prevSelections.push({
       search: document.getElementById(`sim-captain-search-${i}`)?.value || '',
       cap: document.getElementById(`sim-captain-select-${i}`)?.value || '',
+      capacity: document.getElementById(`sim-rally-capacity-${i}`)?.value || '',
       inf: document.getElementById(`sim-captain-hero-inf-${i}`)?.value || '',
       lan: document.getElementById(`sim-captain-hero-lan-${i}`)?.value || '',
       mrk: document.getElementById(`sim-captain-hero-mrk-${i}`)?.value || '',
@@ -676,9 +677,11 @@ function renderCaptainSelectionBlocks() {
     });
   }
 
-  // Ensure Section 2 global ratio section is ALWAYS visible (draggable range sliders)
+  // Ensure Section 2 global ratio section and formation capacity are ALWAYS visible
   const globalRatioSection = document.getElementById('global-ratio-section');
-  const garrisonCapacitySection = document.getElementById('garrison-capacity-section');
+  const formationCapacitySection = document.getElementById('formation-capacity-section') || document.getElementById('garrison-capacity-section');
+  const formationCapacityLabel = document.getElementById('formation-capacity-label');
+  const formationCapacityHint = document.getElementById('formation-capacity-hint');
   const globalJoinerSection = document.getElementById('global-joiner-heroes-section');
   const ratioSectionLabel = document.getElementById('ratio-section-label');
 
@@ -695,8 +698,26 @@ function renderCaptainSelectionBlocks() {
     }
   }
 
-  if (garrisonCapacitySection) {
-    garrisonCapacitySection.style.display = formationType === 'garrison' ? '' : 'none';
+  if (formationCapacitySection) {
+    formationCapacitySection.style.display = '';
+  }
+  if (formationCapacityLabel) {
+    if (formationType === 'garrison') {
+      formationCapacityLabel.textContent = '🛡️ Garrison Capacity (Leader Limit)';
+    } else if (count > 1) {
+      formationCapacityLabel.textContent = '🛡️ Default Rally Capacity (Inherited by all rallies)';
+    } else {
+      formationCapacityLabel.textContent = '🛡️ Rally Capacity (Leader Limit)';
+    }
+  }
+  if (formationCapacityHint) {
+    if (formationType === 'garrison') {
+      formationCapacityHint.textContent = "Total garrison capacity limit set by the garrison leader";
+    } else if (count > 1) {
+      formationCapacityHint.textContent = "Each rally below can also have its own specific capacity";
+    } else {
+      formationCapacityHint.textContent = "Total rally capacity limit set by the rally captain";
+    }
   }
 
   let blocksHtml = '';
@@ -709,6 +730,8 @@ function renderCaptainSelectionBlocks() {
       : (count > 1 ? `Rally ${i} Captain & Hero Slots` : 'Rally Captain & Hero Slots');
 
     const curSearch = prevSelections[i - 1]?.search || '';
+    const defaultGlobalCap = elements.simCapacityInput?.value || '2000000';
+    const curCapacity = prevSelections[i - 1]?.capacity || defaultGlobalCap;
     const hasCustomRatio = prevSelections[i - 1]?.hasCustomRatio || false;
     const curRatioInf = prevSelections[i - 1]?.ratioInf || '50';
     const curRatioLan = prevSelections[i - 1]?.ratioLan || '20';
@@ -759,6 +782,23 @@ function renderCaptainSelectionBlocks() {
           <select class="form-input sim-captain-select-input" id="sim-captain-select-${i}" data-index="${i}">
             ${makePlayerOptionsHtml(curSearch)}
           </select>
+        </div>
+
+        <!-- Rally / Garrison Capacity Box (Leader Limit) -->
+        <div class="rally-capacity-box">
+          <div class="rally-capacity-header">
+            <label class="picker-label">🛡️ ${isGarrison ? 'Garrison' : (count > 1 ? `Rally ${i}` : 'Rally')} Capacity (Leader Limit)</label>
+            <span class="text-xs text-muted">Max troops leader can hold</span>
+          </div>
+          <div class="rally-capacity-input-row">
+            <input type="number" class="form-input sim-rally-capacity-input" id="sim-rally-capacity-${i}" data-index="${i}" value="${escapeHtml(curCapacity)}" placeholder="e.g. 2,000,000">
+            <div class="preset-pills" style="margin:0;">
+              <button type="button" class="btn-preset btn-rally-cap-preset" data-index="${i}" data-capacity="1500000">1.5M</button>
+              <button type="button" class="btn-preset btn-rally-cap-preset" data-index="${i}" data-capacity="2000000">2.0M</button>
+              <button type="button" class="btn-preset btn-rally-cap-preset" data-index="${i}" data-capacity="2500000">2.5M</button>
+              <button type="button" class="btn-preset btn-rally-cap-preset" data-index="${i}" data-capacity="3000000">3.0M</button>
+            </div>
+          </div>
         </div>
 
         <!-- 3-Column Hero Trio Grid -->
@@ -863,6 +903,8 @@ function renderCaptainSelectionBlocks() {
     const numMrk = document.getElementById(`sim-rally-ratio-mrk-${i}`);
 
     if (prev) {
+      const capInp = document.getElementById(`sim-rally-capacity-${i}`);
+      if (capInp && prev.capacity) capInp.value = prev.capacity;
       if (capEl && prev.cap && capEl.querySelector(`option[value="${prev.cap}"]`)) capEl.value = prev.cap;
       if (infEl && prev.inf && infEl.querySelector(`option[value="${prev.inf}"]`)) infEl.value = prev.inf;
       if (lanEl && prev.lan && lanEl.querySelector(`option[value="${prev.lan}"]`)) lanEl.value = prev.lan;
@@ -963,6 +1005,17 @@ function renderCaptainSelectionBlocks() {
       if (sliderMrk && numMrk) { sliderMrk.value = btn.dataset.mrk; numMrk.value = btn.dataset.mrk; }
 
       if (sliderInf) sliderInf.dispatchEvent(new Event('input'));
+    });
+  });
+
+  container.querySelectorAll('.btn-rally-cap-preset').forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      e.preventDefault();
+      const idx = btn.dataset.index;
+      const capInp = document.getElementById(`sim-rally-capacity-${idx}`);
+      if (capInp) {
+        capInp.value = btn.dataset.capacity;
+      }
     });
   });
 }
@@ -1247,10 +1300,12 @@ function getCaptainPayloadData() {
     }
 
     const joiners = [1, 2, 3, 4].map(s => document.getElementById(`sim-block-joiner-${i}-slot-${s}`)?.value).filter(Boolean);
+    const rallyCapVal = Number(document.getElementById(`sim-rally-capacity-${i}`)?.value || elements.simCapacityInput?.value || 2000000);
 
     captainsList.push({
       captain_id: cId ? parseInt(cId, 10) : null,
       captain_heroes: [cInfHero, cLanHero, cMrkHero].filter(Boolean),
+      capacity: rallyCapVal,
       ratio: rallyRatio,
       target_joiners: joiners,
     });
@@ -1273,8 +1328,13 @@ async function runSimulation() {
     const scope = document.getElementById('sim-scope-toggle')?.querySelector('.active')?.dataset.value || 'state';
     const allianceTag = elements.simAllianceSelect ? elements.simAllianceSelect.value : '';
 
-    // Validate ratio for each rally
+    // Validate capacity & ratio for each rally
     for (let i = 0; i < captainData.rally_captains.length; i++) {
+      const cap = captainData.rally_captains[i].capacity;
+      if (!cap || cap <= 0) {
+        showToast(`Rally ${i + 1} capacity must be greater than 0`, 'error');
+        return;
+      }
       const r = captainData.rally_captains[i].ratio;
       const rSum = r.infantry + r.lancers + r.marksman;
       if (rSum !== 100) {
@@ -1294,6 +1354,7 @@ async function runSimulation() {
           generation: generation,
           event_scope: scope,
           alliance_tag: allianceTag,
+          capacity: Number(elements.simCapacityInput?.value || 2000000),
           online_only: true,
           post_to_discord: false,
           rally_captains: captainData.rally_captains,
@@ -1485,6 +1546,7 @@ function renderMultiRallyInSim(rallies) {
         <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
           <h3>${rally.label}</h3>
           ${avgFcLabel}
+          <span class="rally-metric-pill" style="font-size:12px;font-weight:600;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.15);padding:2px 8px;border-radius:6px;">🛡️ Limit: ${formatNumber(maxCapacity)}</span>
           <span class="rally-result-ratio-pill">
             <span class="troop-dot inf"></span><strong class="inf">${actualInfPct}%</strong> Inf ·
             <span class="troop-dot lan"></span><strong class="lan">${actualLanPct}%</strong> Lan ·
@@ -1501,8 +1563,8 @@ function renderMultiRallyInSim(rallies) {
           <div class="rally-metric-lbl">Capacity Filled</div>
         </div>
         <div class="rally-metric-card">
-          <div class="rally-metric-val">${formatNumber(totalAssigned)}</div>
-          <div class="rally-metric-lbl">Total Assigned</div>
+          <div class="rally-metric-val">${formatNumber(totalAssigned)} <span style="font-size:12px;color:var(--text-muted);font-weight:400;">/ ${formatNumber(maxCapacity)}</span></div>
+          <div class="rally-metric-lbl">Troops / Leader Limit</div>
         </div>
         <div class="rally-metric-card">
           <div class="rally-metric-val">${rally.players.length}</div>
@@ -2527,11 +2589,23 @@ function initEventListeners() {
     });
   });
 
-  document.querySelectorAll('.preset-pills .btn-preset[data-capacity]').forEach((btn) => {
+  document.querySelectorAll('#formation-capacity-section .preset-pills .btn-preset[data-capacity]').forEach((btn) => {
     btn.addEventListener('click', () => {
-      elements.simCapacityInput.value = btn.dataset.capacity;
+      if (elements.simCapacityInput) elements.simCapacityInput.value = btn.dataset.capacity;
+      document.querySelectorAll('.sim-rally-capacity-input').forEach((inp) => {
+        inp.value = btn.dataset.capacity;
+      });
     });
   });
+
+  if (elements.simCapacityInput) {
+    elements.simCapacityInput.addEventListener('input', (e) => {
+      const val = e.target.value;
+      document.querySelectorAll('.sim-rally-capacity-input').forEach((inp) => {
+        inp.value = val;
+      });
+    });
+  }
 
   // Mode & Formation Type Toggles
   elements.simModeBtns.forEach((btn) => {
