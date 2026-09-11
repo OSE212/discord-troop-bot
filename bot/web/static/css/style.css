@@ -2792,3 +2792,302 @@ body {
   cursor: pointer;
 }
 
+/* ============================================================
+   SIMULATOR UX SIMPLIFICATION — NEW CLASSES
+   ============================================================ */
+
+/* Section divider between Formation Setup / Ratio / Leadership */
+.sim-section-divider {
+  border: none;
+  border-top: 1px solid rgba(255, 255, 255, 0.07);
+  margin: 20px 0 20px;
+}
+
+.sim-section-heading {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  margin-bottom: 14px;
+}
+
+/* Online-player callout banner inside Simulator tab */
+.sim-online-banner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  background: rgba(0, 242, 254, 0.06);
+  border: 1px solid rgba(0, 242, 254, 0.2);
+  border-radius: var(--radius-sm);
+  padding: 10px 14px;
+  margin-bottom: 20px;
+  font-size: 13px;
+  color: var(--text-secondary);
+}
+.sim-online-banner strong { color: var(--color-cyan); }
+.sim-online-banner .sim-banner-link {
+  font-size: 12px;
+  color: var(--color-cyan);
+  background: none;
+  border: 1px solid rgba(0, 242, 254, 0.35);
+  border-radius: 6px;
+  padding: 3px 10px;
+  cursor: pointer;
+  transition: var(--transition);
+  white-space: nowrap;
+}
+.sim-online-banner .sim-banner-link:hover { background: rgba(0, 242, 254, 0.12); }
+
+/* Captain / Rally block */
+.rally-block {
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: var(--radius-sm);
+  padding: 14px;
+  margin-bottom: 16px;
+}
+.rally-block-title {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--color-amber);
+  margin-bottom: 3px;
+}
+.rally-block-hint {
+  font-size: 11px;
+  color: var(--text-muted);
+  margin-bottom: 10px;
+}
+
+/* Captain search + dropdown stacked */
+.captain-search-wrap { margin-bottom: 0; }
+.captain-search-wrap input {
+  font-size: 12px;
+  height: 34px;
+  background: rgba(0, 0, 0, 0.25);
+  border-bottom-left-radius: 0;
+  border-bottom-right-radius: 0;
+}
+.captain-select-wrap { margin-bottom: 12px; }
+.captain-select-wrap select {
+  border-top-left-radius: 0;
+  border-top-right-radius: 0;
+  border-top: none !important;
+}
+
+/* 3-column hero grid */
+.hero-trio-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+  margin-bottom: 12px;
+}
+.hero-trio-label {
+  font-size: 11px;
+  font-weight: 600;
+  display: block;
+  margin-bottom: 4px;
+}
+.hero-trio-label.inf { color: var(--troop-inf); }
+.hero-trio-label.lan { color: var(--troop-lan); }
+.hero-trio-label.mrk { color: var(--troop-mrk); }
+
+/* Per-rally/garrison ratio section */
+.rally-ratio-section {
+  padding-top: 10px;
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
+  margin-top: 4px;
+}
+.rally-ratio-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.rally-ratio-label {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--text-secondary);
+}
+.rally-ratio-sum {
+  font-size: 10px;
+  font-weight: 700;
+  padding: 1px 7px;
+  border-radius: 20px;
+  border: 1px solid;
+}
+.rally-ratio-sum.valid {
+  color: var(--color-emerald);
+  border-color: rgba(16, 185, 129, 0.4);
+  background: rgba(16, 185, 129, 0.08);
+}
+.rally-ratio-sum.invalid {
+  color: var(--color-rose);
+  border-color: rgba(239, 68, 68, 0.4);
+  background: rgba(239, 68, 68, 0.08);
+}
+.rally-ratio-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+}
+.rally-ratio-grid label {
+  font-size: 10px;
+  display: block;
+  margin-bottom: 2px;
+}
+.rally-ratio-grid label.inf { color: var(--troop-inf); }
+.rally-ratio-grid label.lan { color: var(--troop-lan); }
+.rally-ratio-grid label.mrk { color: var(--troop-mrk); }
+.rally-ratio-grid input { font-size: 11px; height: 32px; }
+
+/* Live ratio preview strip */
+.ratio-preview-bar {
+  display: flex;
+  height: 5px;
+  border-radius: 4px;
+  overflow: hidden;
+  margin-top: 8px;
+  gap: 1px;
+}
+.ratio-preview-bar .rpb-inf { background: var(--troop-inf); flex-shrink: 0; transition: flex 0.2s ease; }
+.ratio-preview-bar .rpb-lan { background: var(--troop-lan); flex-shrink: 0; transition: flex 0.2s ease; }
+.ratio-preview-bar .rpb-mrk { background: var(--troop-mrk); flex-shrink: 0; transition: flex 0.2s ease; }
+
+/* Target joiner heroes inside each rally/garrison block */
+.rally-joiner-heroes {
+  margin-top: 12px;
+  padding-top: 10px;
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
+}
+.rally-joiner-heroes-title {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--text-secondary);
+  margin-bottom: 8px;
+}
+.rally-joiner-slot-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 6px;
+}
+@media (max-width: 600px) {
+  .rally-joiner-slot-grid { grid-template-columns: repeat(2, 1fr); }
+}
+.rally-joiner-slot {
+  background: rgba(0,0,0,0.2);
+  border: 1px solid rgba(255,255,255,0.05);
+  border-radius: 6px;
+  padding: 7px 8px;
+}
+.rally-joiner-slot-num {
+  font-size: 9px;
+  color: var(--color-cyan);
+  font-weight: 700;
+  text-transform: uppercase;
+  margin-bottom: 3px;
+}
+.rally-joiner-slot select { font-size: 11px; height: 30px; }
+
+/* Result card classes */
+.rally-result-card {
+  border-radius: var(--radius-md);
+  background: var(--bg-card);
+  padding: 20px;
+  margin-bottom: 20px;
+  border: 1px solid rgba(255,255,255,0.06);
+  border-top: 3px solid transparent;
+}
+.rally-result-card.role-main { border-top-color: var(--color-amber); }
+.rally-result-card.role-garrison { border-top-color: var(--color-cyan); }
+.rally-result-card.role-other { border-top-color: var(--color-rose); }
+
+.rally-result-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 14px;
+  flex-wrap: wrap;
+}
+.rally-result-header h3 { margin: 0; font-size: 18px; }
+.rally-status-badge {
+  background: rgba(255,255,255,0.06);
+  border: 1px solid rgba(255,255,255,0.12);
+  border-radius: 6px;
+  padding: 3px 10px;
+  font-size: 12px;
+  color: var(--color-amber);
+  font-weight: 600;
+}
+
+.rally-metrics-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(110px, 1fr));
+  gap: 10px;
+  margin-bottom: 16px;
+}
+.rally-metric-card {
+  background: rgba(0, 0, 0, 0.2);
+  border: 1px solid rgba(255,255,255,0.06);
+  border-radius: var(--radius-sm);
+  padding: 10px 12px;
+  text-align: center;
+}
+.rally-metric-val {
+  font-size: 20px;
+  font-weight: 700;
+  line-height: 1.2;
+}
+.rally-metric-val.fill-100 { color: var(--color-emerald); }
+.rally-metric-val.fill-mid { color: var(--color-amber); }
+.rally-metric-val.fill-low { color: var(--color-rose); }
+.rally-metric-lbl { font-size: 11px; color: var(--text-muted); margin-top: 3px; }
+
+.rally-breakdown-section {
+  background: rgba(0, 0, 0, 0.15);
+  padding: 12px;
+  border-radius: var(--radius-sm);
+  border: 1px solid rgba(255,255,255,0.06);
+  margin-bottom: 16px;
+}
+.rally-breakdown-title {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--text-secondary);
+  margin-bottom: 10px;
+}
+
+/* Overview — Battle Readiness card */
+.readiness-card { display: flex; flex-direction: column; gap: 0; }
+.readiness-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 0;
+  border-bottom: 1px solid rgba(255,255,255,0.05);
+}
+.readiness-row:last-child { border-bottom: none; }
+.readiness-row-label { font-size: 13px; color: var(--text-secondary); }
+.readiness-row-val { font-size: 13px; font-weight: 700; }
+.readiness-row-val.online { color: var(--color-emerald); }
+.readiness-row-val.warning { color: var(--color-amber); }
+.readiness-cta {
+  margin-top: 14px;
+  width: 100%;
+}
+
+/* Roster — Online section label */
+.online-section-label {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--color-cyan);
+}
+
+/* Context-hiding utility */
+.hidden-context { display: none !important; }

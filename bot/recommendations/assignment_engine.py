@@ -150,6 +150,13 @@ class MultiRallyAssignmentEngine:
                 if (inf + lan + mrk) > 0:
                     ratio = {"infantry": inf, "lancers": lan, "marksman": mrk}
 
+            # Support custom joiners override per rally if specified in rally_captains
+            custom_joiners = [j for j in cap_info.get("target_joiners", []) if j] if cap_info else []
+            joiner_list = custom_joiners if custom_joiners else heroes["joiners"]
+
+            cap_heroes = custom_captains_map.get(idx, {}).get("heroes", [])
+            primary_cap = cap_heroes[0] if cap_heroes else heroes["primary_captain"]
+
             rows: List[PlayerAssignmentRow] = []
             for rank, p in enumerate(group_players):
                 march = p.get("march_limit", 160000)
@@ -174,8 +181,8 @@ class MultiRallyAssignmentEngine:
                     infantry_count=counts.get(TroopType.INFANTRY, 0),
                     lancer_count=counts.get(TroopType.LANCERS, 0),
                     marksman_count=counts.get(TroopType.MARKSMAN, 0),
-                    recommended_captain=heroes["primary_captain"],
-                    recommended_joiners=heroes["joiners"],
+                    recommended_captain=primary_cap,
+                    recommended_joiners=joiner_list,
                     tactical_note=tactical_note,
                     helios=has_helios,
                     fc_level=avg_level,

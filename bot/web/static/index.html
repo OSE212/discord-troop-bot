@@ -257,24 +257,33 @@
             </div>
           </div>
 
-          <div class="glass-card quick-guide-card">
+          <!-- Battle Readiness (replaces static guide card) -->
+          <div class="glass-card">
             <div class="card-header">
-              <h3 class="card-title">How the Optimizer Operates</h3>
+              <h3 class="card-title">Battle Readiness</h3>
             </div>
-            <ul class="quick-guide-list">
-              <li>
-                <div class="guide-bullet">1</div>
-                <div><strong>Deterministic Greedy Scoring:</strong> Players with higher FC levels and Helios priority are allocated first.</div>
-              </li>
-              <li>
-                <div class="guide-bullet">2</div>
-                <div><strong>Single Player March Rule:</strong> Each player is utilized only once per formation even when their march is split.</div>
-              </li>
-              <li>
-                <div class="guide-bullet">3</div>
-                <div><strong>Dynamic Ratio Optimization:</strong> Proportions are calculated using largest-remainder rounding with finite capacity constraints.</div>
-              </li>
-            </ul>
+            <div class="readiness-card">
+              <div class="readiness-row">
+                <span class="readiness-row-label">Players Checked In (Online)</span>
+                <span class="readiness-row-val online" id="readiness-online">0</span>
+              </div>
+              <div class="readiness-row">
+                <span class="readiness-row-label">Total Registered Players</span>
+                <span class="readiness-row-val" id="readiness-total">0</span>
+              </div>
+              <div class="readiness-row">
+                <span class="readiness-row-label">Last Formation Run</span>
+                <span class="readiness-row-val warning" id="readiness-last-calc">—</span>
+              </div>
+              <div class="readiness-row">
+                <span class="readiness-row-label">Combined March Capacity</span>
+                <span class="readiness-row-val" id="readiness-capacity">—</span>
+              </div>
+            </div>
+            <button class="btn btn-primary readiness-cta" id="btn-quick-sim">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+              Go to Simulator
+            </button>
           </div>
         </div>
       </section>
@@ -336,10 +345,11 @@
         <div class="table-toolbar">
 
           <div style="display: flex; gap: 8px; align-items: center; margin-right: auto;">
-            <button class="btn btn-secondary" id="btn-war-select-all" style="padding: 6px 12px; font-size: 12px;">Check All</button>
-            <button class="btn btn-secondary" id="btn-war-clear" style="padding: 6px 12px; font-size: 12px;">Uncheck All</button>
-            <div class="stat-value" style="font-size: 13px; margin-left: 8px;">
-              Online: <span id="war-online-count" style="color: var(--color-cyan); font-weight: 700;">0</span>
+            <span class="online-section-label">Online for Battle:</span>
+            <button class="btn btn-secondary" id="btn-war-select-all" style="padding: 6px 12px; font-size: 12px;">Mark All Online</button>
+            <button class="btn btn-secondary" id="btn-war-clear" style="padding: 6px 12px; font-size: 12px;">Clear All</button>
+            <div class="stat-value" style="font-size: 13px; margin-left: 4px;">
+              <span id="war-online-count" style="color: var(--color-cyan); font-weight: 700;">0</span> online
             </div>
           </div>
 
@@ -399,11 +409,21 @@
           </div>
         </div>
 
+        <!-- Online player banner -->
+        <div class="sim-online-banner" id="sim-online-banner">
+          <span>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:5px;"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+            Using <strong id="sim-banner-online-count">0 players</strong> checked in for battle. Go to Roster to mark who is online.
+          </span>
+          <button class="sim-banner-link" id="btn-banner-goto-roster">Roster Tab →</button>
+        </div>
+
         <div class="sim-layout-full" id="sim-params-wrap">
           <!-- Setup Panel -->
           <div class="glass-card setup-card">
 
-            <h3 class="card-title mb-16">Formation Parameters</h3>
+            <!-- SECTION 1: Formation Setup -->
+            <div class="sim-section-heading">1 — Formation Setup</div>
 
             <!-- Generation & Alliance Tag Filters -->
             <div class="form-group">
@@ -468,8 +488,14 @@
             <div class="form-group">
               <label class="form-label">Event Scope</label>
               <div class="toggle-segmented" id="sim-scope-toggle">
-                <button class="segment-btn active" data-value="state">🌍 State Level</button>
-                <button class="segment-btn" data-value="alliance">🏰 Alliance Only</button>
+                <button class="segment-btn active" data-value="state">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
+                  State Level
+                </button>
+                <button class="segment-btn" data-value="alliance">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+                  Alliance Only
+                </button>
               </div>
             </div>
 
@@ -486,13 +512,12 @@
               </select>
             </div>
 
-            <!-- Online players notice -->
-            <div class="form-group" style="background: rgba(0,220,255,0.06); border: 1px solid var(--color-cyan); border-radius: 8px; padding: 10px; font-size: 13px; color: var(--text-secondary);">
-              ⚡ Both Rally and Garrison use the <strong>checked-in online players</strong> from the Roster tab.
-              <span id="sim-online-count" style="color: var(--color-cyan); font-weight:600;"></span>
-            </div>
+            <!-- SECTION 2: Ratio & Capacity -->
+            <hr class="sim-section-divider">
+            <div class="sim-section-heading">2 — Ratio &amp; Capacity</div>
 
-            <div class="form-group">
+            <!-- Global ratio sliders (shown for Garrison only; hidden for Rally) -->
+            <div id="global-ratio-section" class="form-group">
               <div class="label-with-meta">
                 <label class="form-label">Troop Ratio Percentages</label>
                 <span class="ratio-sum-badge valid" id="ratio-sum-badge">Total: 100%</span>
@@ -534,85 +559,25 @@
                 </div>
               </div>
 
-              <div class="preset-pills">
+              <div class="preset-pills mt-8">
                 <span class="preset-hint">Presets:</span>
                 <button class="btn-preset" data-inf="50" data-lan="20" data-mrk="30">50 / 20 / 30</button>
                 <button class="btn-preset" data-inf="60" data-lan="20" data-mrk="20">60 / 20 / 20</button>
                 <button class="btn-preset" data-inf="40" data-lan="30" data-mrk="30">40 / 30 / 30</button>
                 <button class="btn-preset" data-inf="34" data-lan="33" data-mrk="33">Balanced</button>
               </div>
-            </div>
 
-            <!-- Dynamic Captains Container (Renders 1 to N Captain blocks based on rally count & garrison) -->
-            <div id="sim-captains-container"></div>
-
-            <!-- Target Joiner Heroes (Top 4 Buffs) -->
-            <div class="form-group">
-              <div class="label-with-meta">
-                <label class="form-label">Target Joiner Heroes (Top 4 Buffs)</label>
-                <span class="form-section-hint">Active Expedition Skills</span>
+              <!-- Live ratio preview strip -->
+              <div class="ratio-preview-bar" id="ratio-preview-bar">
+                <div class="rpb-inf" id="rpb-inf" style="flex: 50"></div>
+                <div class="rpb-lan" id="rpb-lan" style="flex: 20"></div>
+                <div class="rpb-mrk" id="rpb-mrk" style="flex: 30"></div>
               </div>
 
-              <!-- Hero Quick Presets -->
-              <div class="preset-pills mb-12">
-                <span class="preset-hint">Hero Presets:</span>
-                <button type="button" class="btn-preset btn-hero-preset" data-preset="attack_all_out" title="Jessie, Jasser, Seoyoon, Norah">⚡ Attack All-Out</button>
-                <button type="button" class="btn-preset btn-hero-preset" data-preset="fortress_defense" title="Patrick, Sergey, Ling Xue, Ahmose">🛡️ Fortress Defense</button>
-                <button type="button" class="btn-preset btn-hero-preset" data-preset="mixed_svs" title="Jessie, Seoyoon, Patrick, Sergey">⚔️ Mixed / SvS</button>
-                <button type="button" class="btn-preset btn-hero-preset" data-preset="double_damage" title="Jessie, Jasser, Jessie, Seoyoon">🔥 Double Jessie</button>
-                <button type="button" class="btn-preset btn-hero-preset" data-preset="double_hp" title="Patrick, Sergey, Ling Xue, Patrick">🏰 Double Patrick</button>
-                <button type="button" class="btn-preset" id="btn-hero-reset" title="Reset slots to battle mode default">↺ Reset</button>
-              </div>
+            </div><!-- end global-ratio-section -->
 
-              <!-- 4 Hero Slots -->
-              <div class="sim-heroes-grid" id="sim-heroes-grid">
-                <div class="sim-hero-slot" data-slot="1">
-                  <div class="sim-slot-header">
-                    <span class="sim-slot-num">Slot 1</span>
-                    <span class="sim-slot-badge">Leader</span>
-                  </div>
-                  <select class="form-input sim-hero-select" id="sim-hero-slot-1">
-                    <option value="Jessie">Jessie</option>
-                  </select>
-                  <div class="sim-slot-buff" id="sim-hero-buff-1">+25% Damage Dealt (Skill 5)</div>
-                </div>
-
-                <div class="sim-hero-slot" data-slot="2">
-                  <div class="sim-slot-header">
-                    <span class="sim-slot-num">Slot 2</span>
-                    <span class="sim-slot-badge">Joiner</span>
-                  </div>
-                  <select class="form-input sim-hero-select" id="sim-hero-slot-2">
-                    <option value="Jasser">Jasser</option>
-                  </select>
-                  <div class="sim-slot-buff" id="sim-hero-buff-2">+25% Damage Dealt (Skill 5)</div>
-                </div>
-
-                <div class="sim-hero-slot" data-slot="3">
-                  <div class="sim-slot-header">
-                    <span class="sim-slot-num">Slot 3</span>
-                    <span class="sim-slot-badge">Joiner</span>
-                  </div>
-                  <select class="form-input sim-hero-select" id="sim-hero-slot-3">
-                    <option value="Seoyoon">Seoyoon</option>
-                  </select>
-                  <div class="sim-slot-buff" id="sim-hero-buff-3">+25% Attack (Skill 5)</div>
-                </div>
-
-                <div class="sim-hero-slot" data-slot="4">
-                  <div class="sim-slot-header">
-                    <span class="sim-slot-num">Slot 4</span>
-                    <span class="sim-slot-badge">Joiner</span>
-                  </div>
-                  <select class="form-input sim-hero-select" id="sim-hero-slot-4">
-                    <option value="Norah">Norah</option>
-                  </select>
-                  <div class="sim-slot-buff" id="sim-hero-buff-4">Enemy Damage Reduction &amp; Attack boost</div>
-                </div>
-              </div>
-            </div>
-
-            <div class="form-group">
+            <!-- Formation Capacity (Garrison only) -->
+            <div class="form-group" id="garrison-capacity-section" style="display:none;">
               <label class="form-label">Formation Capacity</label>
               <input type="number" class="form-input" id="sim-capacity" value="1500000" placeholder="e.g. 1,500,000">
               <div class="preset-pills mt-8">
@@ -622,6 +587,14 @@
                 <button class="btn-preset" data-capacity="2500000">2.5M</button>
               </div>
             </div>
+
+            <!-- SECTION 3: Leadership -->
+            <hr class="sim-section-divider">
+            <div class="sim-section-heading">3 — Leadership</div>
+
+            <!-- Dynamic Captains Container (renders captain blocks per rally / garrison) -->
+            <div id="sim-captains-container"></div>
+
 
             <button class="btn btn-primary btn-block btn-lg" id="btn-run-simulation">
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
