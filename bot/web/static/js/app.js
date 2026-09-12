@@ -792,7 +792,7 @@ function renderCaptainSelectionBlocks() {
           </div>
           <div class="rally-capacity-input-row">
             <input type="number" class="form-input sim-rally-capacity-input" id="sim-rally-capacity-${i}" data-index="${i}" value="${escapeHtml(curCapacity)}" placeholder="e.g. 2,000,000">
-            <div class="preset-pills" style="margin:0;">
+            <div class="preset-pills preset-pills-inline">
               <button type="button" class="btn-preset btn-rally-cap-preset" data-index="${i}" data-capacity="1500000">1.5M</button>
               <button type="button" class="btn-preset btn-rally-cap-preset" data-index="${i}" data-capacity="2000000">2.0M</button>
               <button type="button" class="btn-preset btn-rally-cap-preset" data-index="${i}" data-capacity="2500000">2.5M</button>
@@ -828,7 +828,7 @@ function renderCaptainSelectionBlocks() {
         <div class="rally-ratio-accordion">
           <label class="custom-ratio-toggle-label">
             <input type="checkbox" class="sim-custom-ratio-check" id="sim-custom-ratio-check-${i}" data-index="${i}" ${hasCustomRatio ? 'checked' : ''}>
-            <span>Customize Ratio for Rally ${i} <span id="sim-custom-ratio-hint-${i}" style="color:var(--text-muted);font-weight:400;">(${hasCustomRatio ? 'Custom ratio active' : `Uses Section 2 ratio: ${state.sim.inf}/${state.sim.lan}/${state.sim.mrk}%`})</span></span>
+            <span>Customize Ratio for Rally ${i} <span id="sim-custom-ratio-hint-${i}" class="custom-ratio-hint">(${hasCustomRatio ? 'Custom ratio active' : `Uses Section 2 ratio: ${state.sim.inf}/${state.sim.lan}/${state.sim.mrk}%`})</span></span>
           </label>
           <div class="rally-custom-ratio-body" id="sim-custom-ratio-body-${i}" style="${hasCustomRatio ? '' : 'display:none;'}">
             <div class="slider-row">
@@ -852,9 +852,9 @@ function renderCaptainSelectionBlocks() {
                 <input type="number" class="num-input" id="sim-rally-ratio-mrk-${i}" min="0" max="100" value="${curRatioMrk}">%
               </div>
             </div>
-            <div style="display:flex;align-items:center;justify-content:space-between;margin-top:8px;flex-wrap:wrap;gap:6px;">
+            <div class="ratio-sum-row">
               <span class="ratio-sum-badge ${ratioSum === 100 ? 'valid' : 'invalid'}" id="sim-rally-ratio-sum-${i}">Total: ${ratioSum}%</span>
-              <div class="preset-pills" style="margin:0;">
+              <div class="preset-pills preset-pills-inline">
                 <button type="button" class="btn-preset btn-rally-ratio-preset" data-index="${i}" data-inf="50" data-lan="20" data-mrk="30">50/20/30</button>
                 <button type="button" class="btn-preset btn-rally-ratio-preset" data-index="${i}" data-inf="60" data-lan="20" data-mrk="20">60/20/20</button>
                 <button type="button" class="btn-preset btn-rally-ratio-preset" data-index="${i}" data-inf="40" data-lan="30" data-mrk="30">40/30/30</button>
@@ -1465,7 +1465,7 @@ function renderMultiRallyInSim(rallies) {
     const p1 = rally.players?.[0];
     const joiners = p1?.recommended_joiners || [];
     const avgFcLabel = rally.avg_fc_level != null
-      ? `<span style="background:rgba(0,242,254,0.12);border:1px solid var(--color-cyan);border-radius:6px;padding:2px 8px;font-size:12px;color:var(--color-cyan);font-weight:700;">Avg FC: ${formatFcLevel(rally.avg_fc_level, 3)}</span>`
+      ? `<span class="rally-fc-avg-pill">Avg FC: ${formatFcLevel(rally.avg_fc_level, 3)}</span>`
       : '';
 
     let totalInf = 0, totalLan = 0, totalMrk = 0;
@@ -1478,7 +1478,7 @@ function renderMultiRallyInSim(rallies) {
     const captainMarch = p1?.march_limit || 0;
 
     // Compute real fill percentage
-    const maxCapacity = rally.max_capacity || (captainMarch * (rally.players?.length || 1));
+    const maxCapacity = rally.max_capacity || rally.capacity || (captainMarch * (rally.players?.length || 1));
     const fillPct = maxCapacity > 0 ? Math.min(100, Math.round((totalAssigned / maxCapacity) * 100)) : 100;
     const fillClass = fillPct >= 100 ? 'fill-100' : fillPct >= 80 ? 'fill-mid' : 'fill-low';
 
@@ -1493,15 +1493,15 @@ function renderMultiRallyInSim(rallies) {
     const joinersHtml = joiners.length > 0 ? `
       <div class="rally-breakdown-section" style="margin-bottom:16px;">
         <div class="rally-breakdown-title">Recommended Joiner Heroes</div>
-        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:8px;">
+        <div class="rally-joiner-heroes-grid">
           ${joiners.slice(0, 4).map((jHero, idx) => {
             const playerRec = rally.players[idx + 1];
             const pName = playerRec ? playerRec.player_name : 'Joiner';
             return `
               <div class="rally-joiner-slot">
                 <div class="rally-joiner-slot-num">Slot ${idx + 1}</div>
-                <div style="font-size:12px;font-weight:700;">${escapeHtml(pName)}</div>
-                <div style="font-size:11px;color:var(--color-amber);">${escapeHtml(jHero)}</div>
+                <div class="rally-joiner-name">${escapeHtml(pName)}</div>
+                <div class="rally-joiner-hero-text">${escapeHtml(jHero)}</div>
               </div>`;
           }).join('')}
         </div>
@@ -1519,7 +1519,7 @@ function renderMultiRallyInSim(rallies) {
         roleBadge = `<span class="role-badge joiner">Slot ${idx}</span>`;
         priorityBadge = `<span class="priority-tag high">⭐ #${idx + 1} High Tier</span>`;
         const firstHero = p.recommended_joiners?.[0] || '';
-        if (firstHero) heroNote = `<span style="font-size:11px;color:var(--color-cyan);font-weight:600;">[${escapeHtml(firstHero)}]</span> `;
+        if (firstHero) heroNote = `<span class="hero-note-inline">[${escapeHtml(firstHero)}]</span> `;
       } else {
         roleBadge = `<span class="role-badge rest">Joiner</span>`;
         priorityBadge = `<span class="priority-tag normal">#${idx + 1} Tier</span>`;
@@ -1530,12 +1530,12 @@ function renderMultiRallyInSim(rallies) {
       return `
         <tr>
           <td>${roleBadge}<strong>${escapeHtml(p.player_name)}</strong> ${heroNote}</td>
-          <td><div style="display:flex;align-items:center;gap:6px;">${priorityBadge} ${fcPill}</div></td>
-          <td style="color:var(--troop-inf);font-weight:600;">${p.infantry_count.toLocaleString()}</td>
-          <td style="color:var(--troop-lan);font-weight:600;">${p.lancer_count.toLocaleString()}</td>
-          <td style="color:var(--troop-mrk);font-weight:600;">${p.marksman_count.toLocaleString()}</td>
+          <td><div class="table-priority-cell">${priorityBadge} ${fcPill}</div></td>
+          <td class="td-inf">${p.infantry_count.toLocaleString()}</td>
+          <td class="td-lan">${p.lancer_count.toLocaleString()}</td>
+          <td class="td-mrk">${p.marksman_count.toLocaleString()}</td>
           <td><strong>${p.march_limit.toLocaleString()}</strong></td>
-          <td>${p.tactical_note ? `<span style="color:var(--color-amber);font-size:12px;">${p.tactical_note}</span>` : ''}</td>
+          <td>${p.tactical_note ? `<span class="table-tactical-note">${p.tactical_note}</span>` : ''}</td>
         </tr>`;
     }).join('');
 
@@ -1543,10 +1543,10 @@ function renderMultiRallyInSim(rallies) {
     card.className = `rally-result-card ${roleClass}`;
     card.innerHTML = `
       <div class="rally-result-header">
-        <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
+        <div class="rally-result-header-row">
           <h3>${rally.label}</h3>
           ${avgFcLabel}
-          <span class="rally-metric-pill" style="font-size:12px;font-weight:600;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.15);padding:2px 8px;border-radius:6px;">🛡️ Limit: ${formatNumber(maxCapacity)}</span>
+          <span class="rally-metric-pill-dark">🛡️ Limit: ${formatNumber(maxCapacity)}</span>
           <span class="rally-result-ratio-pill">
             <span class="troop-dot inf"></span><strong class="inf">${actualInfPct}%</strong> Inf ·
             <span class="troop-dot lan"></span><strong class="lan">${actualLanPct}%</strong> Lan ·
@@ -1563,7 +1563,7 @@ function renderMultiRallyInSim(rallies) {
           <div class="rally-metric-lbl">Capacity Filled</div>
         </div>
         <div class="rally-metric-card">
-          <div class="rally-metric-val">${formatNumber(totalAssigned)} <span style="font-size:12px;color:var(--text-muted);font-weight:400;">/ ${formatNumber(maxCapacity)}</span></div>
+          <div class="rally-metric-val">${formatNumber(totalAssigned)} <span class="rally-metric-subtext">/ ${formatNumber(maxCapacity)}</span></div>
           <div class="rally-metric-lbl">Troops / Leader Limit</div>
         </div>
         <div class="rally-metric-card">
@@ -1675,6 +1675,11 @@ function initSimTypeToggle() {
       if (rallyResultsEl) { rallyResultsEl.innerHTML = ''; }
       // Rally can be attack or defence — unlock mode
       if (modeToggle) modeToggle.querySelectorAll('.segment-btn').forEach(b => { b.disabled = false; b.style.opacity = '1'; });
+      if (typeof syncRatio === 'function') {
+        syncRatio('inf', 50);
+        syncRatio('lan', 20);
+        syncRatio('mrk', 30);
+      }
     } else {
       // Garrison = defence only
       if (rallyCountGroup) rallyCountGroup.style.display = 'none';
@@ -1689,6 +1694,11 @@ function initSimTypeToggle() {
           b.style.opacity = b.dataset.value === 'defence' ? '1' : '0.4';
         });
         state.sim.mode = 'defence';
+      }
+      if (typeof syncRatio === 'function') {
+        syncRatio('inf', 60);
+        syncRatio('lan', 20);
+        syncRatio('mrk', 20);
       }
     }
   }
