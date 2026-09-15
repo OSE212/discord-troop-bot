@@ -964,12 +964,12 @@ function renderCaptainSelectionBlocks() {
         const inf = Number(sliderInf.value) || 0;
         const lan = Number(sliderLan.value) || 0;
         const mrk = Number(sliderMrk.value) || 0;
-        const sum = inf + lan + mrk;
+        const sum = Math.round((inf + lan + mrk) * 100) / 100;
         const sumEl = document.getElementById(`sim-rally-ratio-sum-${i}`);
         const previewEl = document.getElementById(`sim-rally-ratio-preview-${i}`);
         if (sumEl) {
           sumEl.textContent = `Total: ${sum}%`;
-          sumEl.className = `ratio-sum-badge ${sum === 100 ? 'valid' : 'invalid'}`;
+          sumEl.className = `ratio-sum-badge ${Math.abs(sum - 100) < 0.01 ? 'valid' : 'invalid'}`;
         }
         if (previewEl) {
           const bars = previewEl.querySelectorAll('div');
@@ -1218,9 +1218,9 @@ function closeDeleteModal() {
 
 // Simulator Ratio Sync
 function updateRatioBadge() {
-  const sum = Number(state.sim.inf) + Number(state.sim.lan) + Number(state.sim.mrk);
+  const sum = Math.round((Number(state.sim.inf) + Number(state.sim.lan) + Number(state.sim.mrk)) * 100) / 100;
   elements.ratioSumBadge.textContent = `Total: ${sum}%`;
-  if (sum === 100) {
+  if (Math.abs(sum - 100) < 0.01) {
     elements.ratioSumBadge.className = 'ratio-sum-badge valid';
   } else {
     elements.ratioSumBadge.className = 'ratio-sum-badge invalid';
@@ -2586,9 +2586,9 @@ function initEventListeners() {
   elements.sliderInf.addEventListener('input', (e) => syncRatio('inf', e.target.value));
   elements.sliderLan.addEventListener('input', (e) => syncRatio('lan', e.target.value));
   elements.sliderMrk.addEventListener('input', (e) => syncRatio('mrk', e.target.value));
-  elements.numInf.addEventListener('change', (e) => syncRatio('inf', e.target.value));
-  elements.numLan.addEventListener('change', (e) => syncRatio('lan', e.target.value));
-  elements.numMrk.addEventListener('change', (e) => syncRatio('mrk', e.target.value));
+  elements.numInf.addEventListener('input', (e) => syncRatio('inf', e.target.value));
+  elements.numLan.addEventListener('input', (e) => syncRatio('lan', e.target.value));
+  elements.numMrk.addEventListener('input', (e) => syncRatio('mrk', e.target.value));
 
   // Simulator Presets
   document.querySelectorAll('.preset-pills .btn-preset[data-inf]').forEach((btn) => {
