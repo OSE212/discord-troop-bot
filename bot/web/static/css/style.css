@@ -1224,6 +1224,8 @@ body {
 .assignments-table-wrap {
   max-height: 260px;
   overflow-y: auto;
+  overflow-x: auto;
+  width: 100%;
   border: 1px solid var(--border-subtle);
   border-radius: var(--radius-md);
 }
@@ -3685,6 +3687,19 @@ body {
 .data-table-tactical {
   width: 100%;
   border-collapse: collapse;
+}
+
+.assignments-table-wrap {
+  overflow-x: auto;
+  width: 100%;
+}
+
+.results-card {
+  background: var(--bg-card);
+  border-radius: var(--radius-lg);
+  padding: 32px;
+  border: 1px solid rgba(255,255,255,0.08);
+  min-width: 0;
 }
 
 .stat-kpi {
