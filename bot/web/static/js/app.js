@@ -1269,10 +1269,12 @@ function getCaptainPayloadData() {
   const rallyCountEl = document.getElementById('sim-rally-count');
   const count = formationType === 'garrison' ? 1 : parseInt(rallyCountEl?.value || '1', 10);
 
+  const getRatioVal = (val, def) => (val !== undefined && val !== null && val !== '') ? Number(val) : def;
+  
   const masterRatio = {
-    infantry: Number(state.sim.inf) || 50,
-    lancers: Number(state.sim.lan) || 20,
-    marksman: Number(state.sim.mrk) || 30,
+    infantry: getRatioVal(state.sim.inf, 50),
+    lancers: getRatioVal(state.sim.lan, 20),
+    marksman: getRatioVal(state.sim.mrk, 30),
   };
 
   const capIdVal = document.getElementById('sim-captain-select-1')?.value;
@@ -1291,9 +1293,9 @@ function getCaptainPayloadData() {
     const customRatioCheck = document.getElementById(`sim-custom-ratio-check-${i}`);
     let rallyRatio;
     if (customRatioCheck && customRatioCheck.checked) {
-      const infR = Number(document.getElementById(`sim-rally-slider-inf-${i}`)?.value || document.getElementById(`sim-rally-ratio-inf-${i}`)?.value || masterRatio.infantry);
-      const lanR = Number(document.getElementById(`sim-rally-slider-lan-${i}`)?.value || document.getElementById(`sim-rally-ratio-lan-${i}`)?.value || masterRatio.lancers);
-      const mrkR = Number(document.getElementById(`sim-rally-slider-mrk-${i}`)?.value || document.getElementById(`sim-rally-ratio-mrk-${i}`)?.value || masterRatio.marksman);
+      const infR = getRatioVal(document.getElementById(`sim-rally-slider-inf-${i}`)?.value || document.getElementById(`sim-rally-ratio-inf-${i}`)?.value, masterRatio.infantry);
+      const lanR = getRatioVal(document.getElementById(`sim-rally-slider-lan-${i}`)?.value || document.getElementById(`sim-rally-ratio-lan-${i}`)?.value, masterRatio.lancers);
+      const mrkR = getRatioVal(document.getElementById(`sim-rally-slider-mrk-${i}`)?.value || document.getElementById(`sim-rally-ratio-mrk-${i}`)?.value, masterRatio.marksman);
       rallyRatio = { infantry: infR, lancers: lanR, marksman: mrkR };
     } else {
       rallyRatio = { ...masterRatio };
