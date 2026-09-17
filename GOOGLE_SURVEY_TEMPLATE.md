@@ -43,8 +43,8 @@ function createAllianceTroopForm() {
 
   var marchLimitItem = form.addTextItem();
   marchLimitItem.setTitle('March Limit');
-  marchLimitItem.setHelpText('Your standard maximum march capacity (e.g. 165000 or 165k).');
-  marchLimitItem.setRequired(true);
+  marchLimitItem.setHelpText('Your standard maximum march capacity (e.g. 165000 or 165k). Leave blank for default (160k).');
+  marchLimitItem.setRequired(false);
 
   var discordItem = form.addTextItem();
   discordItem.setTitle('Discord Username');
@@ -57,8 +57,7 @@ function createAllianceTroopForm() {
   
   var fcChoices = [
     'FC 10', 'FC 9', 'FC 8', 'FC 7', 'FC 6', 
-    'FC 5', 'FC 4', 'FC 3', 'FC 2', 'FC 1',
-    'Level 30', 'Level 29', 'Level 28', 'Level 27', 'Level 26', 'Level 25', 'Below 25'
+    'FC 5', 'FC 4', 'Below FC 4'
   ];
 
   var infFc = form.addListItem();
@@ -105,12 +104,8 @@ function createAllianceTroopForm() {
       .setHelpText('Select your star level for primary rally/garrison joiners.');
 
   var heroLevels = [
-    'Not Owned',
-    '1 Star',
-    '2 Stars',
-    '3 Stars',
-    '4 Stars',
-    '5 Stars (Max)'
+    '4 Stars or lower',
+    '5 Stars'
   ];
 
   var keyHeroes = [
@@ -153,7 +148,7 @@ If you prefer building the form by hand on [forms.google.com](https://forms.goog
 | :--- | :--- | :---: | :--- |
 | **`In-Game Name`** | Short answer | **Yes** | e.g. `LordVader` |
 | **`Game ID`** | Short answer | No | e.g. `1029384` *(optional numeric ID)* |
-| **`March Limit`** | Short answer | **Yes** | e.g. `165000` or `165k` *(numbers only)* |
+| **`March Limit`** | Short answer | No | e.g. `165000` or `165k` *(optional, defaults to 160k)* |
 | **`Discord Username`** | Short answer | No | e.g. `vader#1234` |
 | **`Infantry FC`** | Dropdown / Short answer | **Yes** | e.g. `FC 5`, `Level 30`, `30`, `5` |
 | **`Infantry Helios`** | Dropdown / Short answer | **Yes** | `No`, `Yes`, or quantity like `150k` |
@@ -161,13 +156,13 @@ If you prefer building the form by hand on [forms.google.com](https://forms.goog
 | **`Lancers Helios`** | Dropdown / Short answer | **Yes** | `No`, `Yes`, or quantity like `150k` |
 | **`Marksman FC`** | Dropdown / Short answer | **Yes** | e.g. `FC 5`, `Level 30`, `30` |
 | **`Marksman Helios`** | Dropdown / Short answer | **Yes** | `No`, `Yes`, or quantity like `150k` |
-| **`Jessie`** *(optional)* | Dropdown | No | `Not Owned`, `1 Star`, ..., `5 Stars` |
-| **`Patrick`** *(optional)* | Dropdown | No | `Not Owned`, `1 Star`, ..., `5 Stars` |
-| **`Jasser`** *(optional)* | Dropdown | No | `Not Owned`, `1 Star`, ..., `5 Stars` |
-| **`Seoyoon`** *(optional)* | Dropdown | No | `Not Owned`, `1 Star`, ..., `5 Stars` |
-| **`Sergey`** *(optional)* | Dropdown | No | `Not Owned`, `1 Star`, ..., `5 Stars` |
-| **`Ling Xue`** *(optional)* | Dropdown | No | `Not Owned`, `1 Star`, ..., `5 Stars` |
-| **`Ahmose`** *(optional)* | Dropdown | No | `Not Owned`, `1 Star`, ..., `5 Stars` |
+| **`Jessie`** *(optional)* | Dropdown | No | `4 Stars or lower`, `5 Stars` |
+| **`Patrick`** *(optional)* | Dropdown | No | `4 Stars or lower`, `5 Stars` |
+| **`Jasser`** *(optional)* | Dropdown | No | `4 Stars or lower`, `5 Stars` |
+| **`Seoyoon`** *(optional)* | Dropdown | No | `4 Stars or lower`, `5 Stars` |
+| **`Sergey`** *(optional)* | Dropdown | No | `4 Stars or lower`, `5 Stars` |
+| **`Ling Xue`** *(optional)* | Dropdown | No | `4 Stars or lower`, `5 Stars` |
+| **`Ahmose`** *(optional)* | Dropdown | No | `4 Stars or lower`, `5 Stars` |
 
 *(Note: Google Forms automatically adds a `Timestamp` column in Google Sheets — the bot automatically recognizes and safely ignores it).*
 

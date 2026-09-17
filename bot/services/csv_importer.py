@@ -554,11 +554,7 @@ class CsvImporter:
                 "Missing required 'Name' or 'Player Name' / 'IGN' column."
             )
             return result
-        if "march_limit" not in col_map:
-            result.errors.append(
-                "Missing required 'March Limit' or 'March Capacity' column."
-            )
-            return result
+        # March limit is optional; defaults to 160,000 if not provided
 
         data_rows = rows[1:]
         result.total_rows = len(data_rows)
@@ -583,11 +579,7 @@ class CsvImporter:
             raw_march = get_val("march_limit")
             march_limit = parse_number(raw_march)
             if not march_limit or march_limit <= 0:
-                result.skipped += 1
-                result.errors.append(
-                    f"Row {line_num} ({name}): Invalid march limit '{raw_march}'."
-                )
-                continue
+                march_limit = 160000
 
             game_id = get_val("game_player_id")
             if not game_id:
