@@ -140,7 +140,7 @@ const elements = {
   simTargetCapacity: document.getElementById('sim-target-capacity'),
   simPlayersCount: document.getElementById('sim-players-count'),
   simComparisonBars: document.getElementById('sim-comparison-bars'),
-  simAssignmentsTbody: document.getElementById('sim-assignments-tbody'),
+  simAssignmentsList: document.getElementById('sim-assignments-list'),
   simResultTitle: document.getElementById('sim-result-title'),
   simResultMeta: document.getElementById('sim-result-meta'),
   simGenSelect: document.getElementById('sim-gen-select'),
@@ -1864,7 +1864,7 @@ function renderSimResult() {
 
   // Assignments — group allocations by player, one row per player
   if (!res.allocations || res.allocations.length === 0) {
-    elements.simAssignmentsTbody.innerHTML = '<tr><td colspan="6" class="empty-cell">No players allocated (ensure players have complete registrations).</td></tr>';
+    elements.simAssignmentsList.innerHTML = '<div class="empty-state">No players allocated (ensure players have complete registrations).</div>';
   } else {
     // Group by player_name
     const byPlayer = {};
@@ -1931,22 +1931,38 @@ function renderSimResult() {
       const fcPill = t.fc_level ? `<span class="pill-level ${t.helios ? 'helios' : ''}">${t.helios ? '🔥 ' : ''}${formatFcLevel(t.fc_level)}</span>` : '<span class="text-muted">-</span>';
 
       return `
-        <tr>
-          <td>
-            <div style="display:flex; align-items:center; flex-wrap:wrap;">
-              ${roleBadge}<strong>${escapeHtml(name)}</strong>
+        <div class="march-order-card">
+          <div class="mo-header">
+            <div class="mo-identity">
+              ${roleBadge}
+              <span class="mo-name">${escapeHtml(name)}</span>
+              ${fcPill}
             </div>
-            ${heroInfo}
-          </td>
-          <td><div style="display:flex;align-items:center;gap:6px;">${priorityBadge} ${fcPill}</div></td>
-          <td style="color:var(--troop-inf); font-weight:600;">${formatNumber(t.infantry)}</td>
-          <td style="color:var(--troop-lan); font-weight:600;">${formatNumber(t.lancers)}</td>
-          <td style="color:var(--troop-mrk); font-weight:600;">${formatNumber(t.marksman)}</td>
-          <td><strong>${formatNumber(t.total)}</strong></td>
-        </tr>`;
+            <div class="mo-priority">${priorityBadge}</div>
+          </div>
+          ${heroInfo ? `<div class="mo-heroes">${heroInfo}</div>` : ''}
+          <div class="mo-stats">
+            <div class="mo-stat inf">
+              <span class="mo-stat-label">Infantry</span>
+              <span class="mo-stat-val">${formatNumber(t.infantry)}</span>
+            </div>
+            <div class="mo-stat lan">
+              <span class="mo-stat-label">Lancers</span>
+              <span class="mo-stat-val">${formatNumber(t.lancers)}</span>
+            </div>
+            <div class="mo-stat mrk">
+              <span class="mo-stat-label">Marksman</span>
+              <span class="mo-stat-val">${formatNumber(t.marksman)}</span>
+            </div>
+            <div class="mo-stat total">
+              <span class="mo-stat-label">Total March</span>
+              <span class="mo-stat-val">${formatNumber(t.total)}</span>
+            </div>
+          </div>
+        </div>`;
     }).join('');
 
-    elements.simAssignmentsTbody.innerHTML = rows;
+    elements.simAssignmentsList.innerHTML = rows;
   }
 
   // Top 4 Joiners

@@ -1226,13 +1226,107 @@ body {
   gap: 12px;
 }
 
-.assignments-table-wrap {
-  max-height: 260px;
+.assignments-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  max-height: 440px;
   overflow-y: auto;
-  overflow-x: auto;
-  width: 100%;
+  padding-right: 8px;
+}
+
+.assignments-list::-webkit-scrollbar {
+  width: 6px;
+}
+.assignments-list::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 10px;
+}
+
+.march-order-card {
+  background: rgba(255, 255, 255, 0.02);
   border: 1px solid var(--border-subtle);
   border-radius: var(--radius-md);
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  transition: var(--transition);
+}
+
+.march-order-card:hover {
+  background: rgba(255, 255, 255, 0.04);
+  border-color: rgba(255, 255, 255, 0.1);
+  transform: translateY(-1px);
+}
+
+.mo-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.mo-identity {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-family: 'Outfit', sans-serif;
+}
+
+.mo-name {
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.mo-heroes {
+  background: rgba(0, 0, 0, 0.2);
+  padding: 8px 12px;
+  border-radius: 6px;
+  border: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.mo-stats {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 12px;
+  background: rgba(0, 0, 0, 0.15);
+  padding: 12px;
+  border-radius: var(--radius-sm);
+  border: 1px solid rgba(255, 255, 255, 0.02);
+}
+
+.mo-stat {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.mo-stat-label {
+  font-size: 11px;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  font-weight: 700;
+  letter-spacing: 0.5px;
+}
+
+.mo-stat-val {
+  font-family: 'Outfit', sans-serif;
+  font-size: 17px;
+  font-weight: 700;
+}
+
+.mo-stat.inf .mo-stat-val { color: var(--troop-inf); }
+.mo-stat.lan .mo-stat-val { color: var(--troop-lan); }
+.mo-stat.mrk .mo-stat-val { color: var(--troop-mrk); }
+.mo-stat.total .mo-stat-val { color: var(--text-primary); text-shadow: 0 0 10px rgba(255,255,255,0.2); }
+
+@media (max-width: 600px) {
+  .mo-stats {
+    grid-template-columns: repeat(2, 1fr);
+  }
 }
 
 /* ============================================================
