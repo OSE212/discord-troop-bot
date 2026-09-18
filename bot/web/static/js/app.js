@@ -397,6 +397,11 @@ async function copySurveyScript() {
 
 // Navigation Tabs
 function switchTab(tabId) {
+  if (tabId === 'calculator' && state.user.role !== 'admin') {
+    showToast('The Combat Calculator is currently in closed Beta and only available to the server owner.', 'warning');
+    return;
+  }
+
   elements.navTabs.forEach((btn) => {
     btn.classList.toggle('active', btn.dataset.tab === tabId);
   });
