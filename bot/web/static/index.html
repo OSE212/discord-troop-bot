@@ -65,6 +65,32 @@
             </svg>
             Rules
           </button>
+          <button class="nav-tab" data-tab="survey" id="tab-btn-survey">
+            <svg class="tab-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+              <polyline points="14 2 14 8 20 8"/>
+              <line x1="16" y1="13" x2="8" y2="13"/>
+              <line x1="16" y1="17" x2="8" y2="17"/>
+              <polyline points="10 9 9 9 8 9"/>
+            </svg>
+            Survey Gen
+          </button>
+          <button class="nav-tab" data-tab="calculator" id="tab-btn-calculator">
+            <svg class="tab-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <rect x="4" y="2" width="16" height="20" rx="2" ry="2"/>
+              <line x1="8" y1="6" x2="16" y2="6"/>
+              <line x1="16" y1="14" x2="16" y2="14.01"/>
+              <line x1="12" y1="14" x2="12" y2="14.01"/>
+              <line x1="8" y1="14" x2="8" y2="14.01"/>
+              <line x1="16" y1="18" x2="16" y2="18.01"/>
+              <line x1="12" y1="18" x2="12" y2="18.01"/>
+              <line x1="8" y1="18" x2="8" y2="18.01"/>
+              <line x1="16" y1="10" x2="16" y2="10.01"/>
+              <line x1="12" y1="10" x2="12" y2="10.01"/>
+              <line x1="8" y1="10" x2="8" y2="10.01"/>
+            </svg>
+            Combat Calc
+          </button>
           <button class="nav-tab" data-tab="guide" id="tab-btn-guide">
             <svg class="tab-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
               <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/>
@@ -899,6 +925,193 @@
             </table>
           </div>
         </div>
+      <!-- TAB 6: SURVEY GENERATOR -->
+      <section class="tab-pane" id="pane-survey">
+        <div class="pane-header">
+          <div>
+            <h2 class="pane-title">Dynamic Survey Generator</h2>
+            <p class="pane-desc">Generate a 1-Tap Google Apps Script to create your alliance roster survey with the correct hero generations.</p>
+          </div>
+        </div>
+        <div class="glass-card mt-24">
+          <div class="form-group">
+            <label class="form-label">Select Server Generation</label>
+            <select class="form-input" id="survey-gen-select">
+              <!-- Options 1 to 15 -->
+              <option value="1">Generation 1</option>
+              <option value="2">Generation 2</option>
+              <option value="3">Generation 3</option>
+              <option value="4">Generation 4</option>
+              <option value="5">Generation 5</option>
+              <option value="6">Generation 6</option>
+              <option value="7">Generation 7</option>
+              <option value="8">Generation 8</option>
+              <option value="9">Generation 9</option>
+              <option value="10">Generation 10</option>
+              <option value="11">Generation 11</option>
+              <option value="12">Generation 12</option>
+              <option value="13">Generation 13</option>
+              <option value="14">Generation 14</option>
+              <option value="15" selected>Generation 15 (Current)</option>
+            </select>
+          </div>
+          <div class="mt-16">
+            <button class="btn btn-primary" id="btn-generate-survey">Generate Code</button>
+            <button class="btn btn-secondary ml-8" id="btn-copy-survey-code" style="display:none;">Copy to Clipboard</button>
+          </div>
+          <div class="mt-24" id="survey-code-container" style="display:none;">
+            <h4 class="subheading">Google Apps Script Code</h4>
+            <pre class="code-block" id="survey-code-output" style="background:#0a0a0a; padding:16px; border-radius:8px; overflow-x:auto; font-family:monospace; font-size:12px; border:1px solid #333; max-height:400px; overflow-y:auto;"></pre>
+          </div>
+        </div>
+      </section>
+
+      <!-- TAB 7: COMBAT CALCULATOR -->
+      <section class="tab-pane" id="pane-calculator">
+        <div class="pane-header">
+          <div>
+            <h2 class="pane-title">Real-Time Combat Calculator</h2>
+            <p class="pane-desc">Simulate frontline survival time and total damage output dynamically.</p>
+          </div>
+        </div>
+        
+        <div class="sim-layout-split mt-24">
+          <!-- Setup Column -->
+          <div class="glass-card setup-card">
+            <!-- Player Presets -->
+            <div class="form-group">
+              <label class="form-label">Player Profile Preset</label>
+              <div class="preset-pills">
+                <button type="button" class="btn-preset calc-preset" data-player="zico">Zico</button>
+                <button type="button" class="btn-preset calc-preset" data-player="ozzy">Ozzy</button>
+                <button type="button" class="btn-preset calc-preset" data-player="grape">Grape</button>
+                <button type="button" class="btn-preset calc-preset" data-player="james">James</button>
+                <button type="button" class="btn-preset calc-preset" data-player="omar law">Omar Law</button>
+                <button type="button" class="btn-preset calc-preset" data-player="brukam">Brukam</button>
+                <button type="button" class="btn-preset calc-preset" data-player="blackjack">Blackjack</button>
+                <button type="button" class="btn-preset calc-preset" data-player="metehan">Metehan</button>
+              </div>
+            </div>
+
+            <div style="display:flex; gap:16px; margin-bottom:24px;">
+              <div class="form-group" style="flex:1;">
+                <label class="form-label">Total Capacity</label>
+                <input type="number" class="form-input" id="calc-capacity" value="160000">
+              </div>
+              <div class="form-group" style="flex:1;">
+                <label class="form-label">FC Level</label>
+                <select class="form-input" id="calc-fc-level">
+                  <option value="10">FC 10</option>
+                  <option value="9">FC 9</option>
+                  <option value="8">FC 8</option>
+                  <option value="7">FC 7</option>
+                  <option value="6">FC 6</option>
+                  <option value="5">FC 5</option>
+                  <option value="4" selected>FC 4</option>
+                </select>
+              </div>
+            </div>
+
+            <!-- Troop Ratios -->
+            <div class="panel-section-header">
+              <h3 class="panel-section-title">Troop Ratio (Must sum to 100%)</h3>
+            </div>
+            <div class="slider-row mt-16">
+              <div class="slider-label"><span class="troop-bullet inf"></span><span>Infantry</span></div>
+              <input type="range" class="range-slider calc-slider" id="calc-inf-slider" min="0" max="100" value="40">
+              <div class="slider-val-wrap"><input type="number" class="num-input calc-num" id="calc-inf-num" value="40">%</div>
+            </div>
+            <div class="slider-row">
+              <div class="slider-label"><span class="troop-bullet lan"></span><span>Lancers</span></div>
+              <input type="range" class="range-slider calc-slider" id="calc-lan-slider" min="0" max="100" value="10">
+              <div class="slider-val-wrap"><input type="number" class="num-input calc-num" id="calc-lan-num" value="10">%</div>
+            </div>
+            <div class="slider-row">
+              <div class="slider-label"><span class="troop-bullet mrk"></span><span>Marksman</span></div>
+              <input type="range" class="range-slider calc-slider" id="calc-mrk-slider" min="0" max="100" value="50">
+              <div class="slider-val-wrap"><input type="number" class="num-input calc-num" id="calc-mrk-num" value="50">%</div>
+            </div>
+            <div class="preset-pills mt-8">
+              <button type="button" class="btn-preset calc-ratio-preset" data-inf="10" data-lan="10" data-mrk="80">Bear (10/10/80)</button>
+              <button type="button" class="btn-preset calc-ratio-preset" data-inf="40" data-lan="10" data-mrk="50">PvP Rally (40/10/50)</button>
+              <button type="button" class="btn-preset calc-ratio-preset" data-inf="60" data-lan="20" data-mrk="20">Garrison (60/20/20)</button>
+              <button type="button" class="btn-preset calc-ratio-preset" data-inf="50" data-lan="0" data-mrk="50">Lancer Skip (50/0/50)</button>
+            </div>
+
+            <!-- Joiners -->
+            <div class="panel-section-header mt-24">
+              <h3 class="panel-section-title">Joiner Heroes (Expedition Skills)</h3>
+            </div>
+            <div style="display:grid; grid-template-columns:1fr 1fr; gap:16px; margin-top:16px;">
+              <div class="form-group">
+                <label class="form-label text-xs">Joiner Slot 1</label>
+                <select class="form-input calc-joiner" id="calc-joiner-1">
+                  <option value="none">None</option>
+                  <option value="jessie">Jessie (+25% Dmg)</option>
+                  <option value="patrick">Patrick (+25% Health)</option>
+                  <option value="sergey">Sergey (-20% Dmg Taken)</option>
+                  <option value="ahmose">Ahmose (+15% Health)</option>
+                  <option value="seoyoon">Seo-yoon (+25% Dmg)</option>
+                  <option value="jasser">Jasser (+25% Dmg)</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label class="form-label text-xs">Joiner Slot 2</label>
+                <select class="form-input calc-joiner" id="calc-joiner-2">
+                  <option value="none">None</option>
+                  <option value="jessie">Jessie (+25% Dmg)</option>
+                  <option value="patrick">Patrick (+25% Health)</option>
+                  <option value="sergey">Sergey (-20% Dmg Taken)</option>
+                  <option value="ahmose">Ahmose (+15% Health)</option>
+                  <option value="seoyoon">Seo-yoon (+25% Dmg)</option>
+                  <option value="jasser">Jasser (+25% Dmg)</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label class="form-label text-xs">Joiner Slot 3</label>
+                <select class="form-input calc-joiner" id="calc-joiner-3">
+                  <option value="none">None</option>
+                  <option value="jessie">Jessie (+25% Dmg)</option>
+                  <option value="patrick">Patrick (+25% Health)</option>
+                  <option value="sergey">Sergey (-20% Dmg Taken)</option>
+                  <option value="ahmose">Ahmose (+15% Health)</option>
+                  <option value="seoyoon">Seo-yoon (+25% Dmg)</option>
+                  <option value="jasser">Jasser (+25% Dmg)</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label class="form-label text-xs">Joiner Slot 4</label>
+                <select class="form-input calc-joiner" id="calc-joiner-4">
+                  <option value="none">None</option>
+                  <option value="jessie">Jessie (+25% Dmg)</option>
+                  <option value="patrick">Patrick (+25% Health)</option>
+                  <option value="sergey">Sergey (-20% Dmg Taken)</option>
+                  <option value="ahmose">Ahmose (+15% Health)</option>
+                  <option value="seoyoon">Seo-yoon (+25% Dmg)</option>
+                  <option value="jasser">Jasser (+25% Dmg)</option>
+                </select>
+              </div>
+            </div>
+
+          </div>
+
+          <!-- Output Column -->
+          <div class="glass-card results-card" style="display:flex; flex-direction:column; justify-content:center; align-items:center;">
+            
+            <div style="text-align:center; margin-bottom:40px;">
+              <h3 style="color:var(--text-muted); font-size:14px; text-transform:uppercase; letter-spacing:1px; margin-bottom:8px;">Frontline Survival Time</h3>
+              <div id="calc-out-survival" style="font-size:48px; font-weight:800; color:var(--troop-inf); text-shadow:0 0 20px rgba(59,130,246,0.3);">0</div>
+              <div class="text-xs text-muted mt-4">Calculated Effective Health Pool</div>
+            </div>
+
+            <div style="text-align:center;">
+              <h3 style="color:var(--text-muted); font-size:14px; text-transform:uppercase; letter-spacing:1px; margin-bottom:8px;">Total Damage Output</h3>
+              <div id="calc-out-damage" style="font-size:48px; font-weight:800; color:var(--troop-mrk); text-shadow:0 0 20px rgba(168,85,247,0.3);">0</div>
+              <div class="text-xs text-muted mt-4">Calculated Raw Damage Potential</div>
+            </div>
+
+          </div>
+        </div>
       </section>
     </main>
 
@@ -1255,11 +1468,27 @@
       </svg>
       Rules
     </button>
+    <button class="nav-tab" data-tab="survey">
+      <svg class="tab-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+        <polyline points="14 2 14 8 20 8"/>
+        <line x1="16" y1="13" x2="8" y2="13"/>
+      </svg>
+      Survey
+    </button>
+    <button class="nav-tab" data-tab="calculator">
+      <svg class="tab-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <rect x="4" y="2" width="16" height="20" rx="2" ry="2"/>
+        <line x1="8" y1="6" x2="16" y2="6"/>
+      </svg>
+      Calc
+    </button>
   </nav>
 
   <!-- TOAST CONTAINER -->
   <div class="toast-container" id="toast-container"></div>
 
+  <script src="/static/js/calculator.js?v=1.0"></script>
   <script src="/static/js/app.js?v=3.7"></script>
 </body>
 </html>
