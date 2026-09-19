@@ -3,7 +3,7 @@
 // ==========================================
 
 const HERO_GENERATIONS = {
-  1: ["Jeronimo", "Natalia", "Molly", "Alonso", "Bahiti", "Zinman"],
+  1: ["Jeronimo", "Alonso"],
   2: ["Flint", "Philly"],
   3: ["Logan", "Mia", "Greg"],
   4: ["Ahmose", "Reina", "Lynn"],
@@ -26,7 +26,7 @@ const ESSENTIAL_JOINERS = [
   { name: 'Jasser', note: 'Attack Joiner' },
   { name: 'Seoyoon', note: 'Attack Joiner' },
   { name: 'Sergey', note: 'Defence Joiner' },
-  { name: 'Ling Xue', note: 'Defence / General Joiner' }
+  { name: 'Walis Bove', note: 'Lancer Joiner' }
 ];
 
 document.addEventListener('DOMContentLoaded', () => {
@@ -43,14 +43,19 @@ document.addEventListener('DOMContentLoaded', () => {
     btnGenerateSurvey.addEventListener('click', () => {
       const targetGen = parseInt(genSelect.value) || 15;
       let dynamicHeroesCode = `  var keyHeroes = [\n`;
+      let addedHeroes = new Set();
       
+      const skipEpics = (targetGen >= 3);
+      const epicsToSkip = ['Jessie', 'Jasser', 'Seoyoon', 'Patrick', 'Sergey'];
+
       // Add essential joiners
       ESSENTIAL_JOINERS.forEach(h => {
+        if (skipEpics && epicsToSkip.includes(h.name)) return;
         dynamicHeroesCode += `    { name: '${h.name}', note: '${h.note}' },\n`;
+        addedHeroes.add(h.name);
       });
 
       // Add generation heroes up to target Gen
-      let addedHeroes = new Set(ESSENTIAL_JOINERS.map(h => h.name));
       for (let g = 1; g <= targetGen; g++) {
         if (!HERO_GENERATIONS[g]) continue;
         HERO_GENERATIONS[g].forEach(heroName => {
