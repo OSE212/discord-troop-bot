@@ -26,7 +26,7 @@ const ESSENTIAL_JOINERS = [
   { name: 'Jasser', note: 'Attack Joiner' },
   { name: 'Seoyoon', note: 'Attack Joiner' },
   { name: 'Sergey', note: 'Defence Joiner' },
-  { name: 'Walis Bove', note: 'Lancer Joiner' }
+  { name: 'Lumak Bokan', note: 'Lancer Joiner' }
 ];
 
 document.addEventListener('DOMContentLoaded', () => {
