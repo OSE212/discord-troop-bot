@@ -1712,8 +1712,7 @@ function initSimTypeToggle() {
   const quickSimBtn = document.getElementById('btn-quick-sim');
   if (quickSimBtn) {
     quickSimBtn.addEventListener('click', () => {
-      const simTab = document.querySelector('.tab-btn[data-tab="pane-simulator"]');
-      if (simTab) simTab.click();
+      switchTab('simulator');
     });
   }
 
